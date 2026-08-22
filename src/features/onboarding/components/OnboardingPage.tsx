@@ -12,11 +12,7 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-export function OnboardingPage({
-  onCompleted,
-}: {
-  onCompleted: (learner: Learner) => void;
-}) {
+export function OnboardingPage({ onCompleted }: { onCompleted: (learner: Learner) => void }) {
   const client = useOnboardingCommandClient();
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<FormValues>({
@@ -27,9 +23,7 @@ export function OnboardingPage({
     mutationFn: (values: FormValues) => client.completeOnboarding(values),
     onSuccess: onCompleted,
     onError: () =>
-      setFailure(
-        "Taffy could not save your name. Your entry is still here—please try again.",
-      ),
+      setFailure("Taffy could not save your name. Your entry is still here—please try again."),
   });
   return (
     <main className="onboarding-shell">
@@ -37,9 +31,7 @@ export function OnboardingPage({
         <p className="wordmark">taffy</p>
         <p className="eyebrow">A calm place to keep what you learn</p>
         <h1 id="welcome-title">What should taffy call you?</h1>
-        <p className="lede">
-          Your name stays on this device and can be changed later.
-        </p>
+        <p className="lede">Your name stays on this device and can be changed later.</p>
         <form
           onSubmit={form.handleSubmit((values) => {
             setFailure(null);
@@ -50,7 +42,6 @@ export function OnboardingPage({
           <label htmlFor="display-name">Display name</label>
           <input
             id="display-name"
-            // biome-ignore lint/a11y/noAutofocus: first-launch name entry is the page's sole primary action.
             autoFocus
             autoComplete="name"
             aria-invalid={Boolean(form.formState.errors.displayName)}

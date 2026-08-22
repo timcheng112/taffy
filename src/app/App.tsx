@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { EmptyLibraryPage } from "../pages/EmptyLibraryPage";
-import {
-  OnboardingPage,
-  useOnboardingCommandClient,
-} from "../features/onboarding";
+import { OnboardingPage, useOnboardingCommandClient } from "../features/onboarding";
 import { queryClient } from "./queryClient";
 
 export function App() {
@@ -12,8 +9,7 @@ export function App() {
     queryKey: ["onboarding", "learner"],
     queryFn: () => client.getLearner(),
   });
-  if (learnerQuery.isPending)
-    return <main className="startup">Opening your library…</main>;
+  if (learnerQuery.isPending) return <main className="startup">Opening your library…</main>;
   if (learnerQuery.isError)
     return (
       <main className="startup startup-error">
@@ -23,9 +19,7 @@ export function App() {
   if (learnerQuery.data === null)
     return (
       <OnboardingPage
-        onCompleted={(learner) =>
-          queryClient.setQueryData(["onboarding", "learner"], learner)
-        }
+        onCompleted={(learner) => queryClient.setQueryData(["onboarding", "learner"], learner)}
       />
     );
   return <EmptyLibraryPage />;

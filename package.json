@@ -1,14 +1,15 @@
 {
   "name": "taffy",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "biome lint .",
-    "format:check": "biome format .",
-    "format": "biome format . --write",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format:check": "oxfmt --check .",
+    "format": "oxfmt .",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,8 +17,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
-    "@tauri-apps/api": "^2.8.0",
     "@tanstack/react-query": "^5.90.6",
+    "@tauri-apps/api": "^2.8.0",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -25,7 +26,6 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.2",
     "@tailwindcss/vite": "^4.1.13",
     "@tauri-apps/cli": "^2.8.4",
     "@testing-library/jest-dom": "^6.8.0",
@@ -36,7 +36,9 @@
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.2",
     "jsdom": "^26.1.0",
-    "typescript": "~5.9.2",
+    "oxfmt": "^0.64.0",
+    "oxlint": "^1.79.0",
+    "typescript": "~7.0.2",
     "vite": "^7.1.4",
     "vitest": "^3.2.4"
   },
