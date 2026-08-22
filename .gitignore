@@ -5,6 +5,7 @@ dist/
 # Rust/Tauri build output and local development state
 src-tauri/target/
 src-tauri/.tauri/
+src-tauri/gen/
 
 # Operating-system metadata and local SQLite databases
 .DS_Store
