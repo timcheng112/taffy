@@ -1,0 +1,75 @@
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { ArrowRight } from "lucide-react";
+import { useOnboardingCommandClient } from "../commands/OnboardingCommandClientProvider";
+import type { Learner } from "../commands/types";
+
+const schema = z.object({
+  displayName: z.string().trim().min(1, "Enter a display name to continue."),
+});
+type FormValues = z.infer<typeof schema>;
+
+export function OnboardingPage({
+  onCompleted,
+}: {
+  onCompleted: (learner: Learner) => void;
+}) {
+  const client = useOnboardingCommandClient();
+  const [failure, setFailure] = useState<string | null>(null);
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { displayName: "" },
+  });
+  const save = useMutation({
+    mutationFn: (values: FormValues) => client.completeOnboarding(values),
+    onSuccess: onCompleted,
+    onError: () =>
+      setFailure(
+        "Taffy could not save your name. Your entry is still here—please try again.",
+      ),
+  });
+  return (
+    <main className="onboarding-shell">
+      <section className="onboarding-card" aria-labelledby="welcome-title">
+        <p className="wordmark">taffy</p>
+        <p className="eyebrow">A calm place to keep what you learn</p>
+        <h1 id="welcome-title">What should taffy call you?</h1>
+        <p className="lede">
+          Your name stays on this device and can be changed later.
+        </p>
+        <form
+          onSubmit={form.handleSubmit((values) => {
+            setFailure(null);
+            save.mutate(values);
+          })}
+          noValidate
+        >
+          <label htmlFor="display-name">Display name</label>
+          <input
+            id="display-name"
+            // biome-ignore lint/a11y/noAutofocus: first-launch name entry is the page's sole primary action.
+            autoFocus
+            autoComplete="name"
+            aria-invalid={Boolean(form.formState.errors.displayName)}
+            aria-describedby="display-name-error"
+            {...form.register("displayName")}
+          />
+          <p id="display-name-error" className="field-error" role="alert">
+            {form.formState.errors.displayName?.message}
+          </p>
+          {failure && (
+            <p className="failure" role="alert">
+              {failure}
+            </p>
+          )}
+          <button type="submit" disabled={save.isPending}>
+            Continue <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}

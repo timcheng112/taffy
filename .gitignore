@@ -1,0 +1,13 @@
+# Dependencies and generated frontend output
+node_modules/
+dist/
+
+# Rust/Tauri build output and local development state
+src-tauri/target/
+src-tauri/.tauri/
+
+# Operating-system metadata and local SQLite databases
+.DS_Store
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  "formatter": { "indentStyle": "space", "indentWidth": 2 },
+  "linter": { "enabled": true },
+  "files": { "includes": ["**", "!node_modules", "!dist", "!src-tauri/target"] }
+}
