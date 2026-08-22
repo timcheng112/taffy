@@ -28,5 +28,5 @@ export function App() {
         }
       />
     );
-  return <EmptyLibraryPage learner={learnerQuery.data} />;
+  return <EmptyLibraryPage />;
 }

@@ -1,7 +1,6 @@
 import { BookOpen, LibraryBig, Settings } from "lucide-react";
-import type { Learner } from "../features/onboarding";
 
-export function EmptyLibraryPage({ learner }: { learner: Learner }) {
+export function EmptyLibraryPage() {
   return (
     <main className="app-shell">
       <aside>
@@ -19,13 +18,11 @@ export function EmptyLibraryPage({ learner }: { learner: Learner }) {
       </aside>
       <section className="library-workspace">
         <header>
-          <p className="eyebrow">Library</p>
-          <h1>Your Library is ready, {learner.displayName}.</h1>
+          <h1>Library</h1>
         </header>
         <div className="empty-library">
           <BookOpen size={28} aria-hidden="true" />
-          <h2>Nothing here yet</h2>
-          <p>Folders will give your saved learning a quiet home.</p>
+          <p>No folders yet.</p>
         </div>
       </section>
     </main>
