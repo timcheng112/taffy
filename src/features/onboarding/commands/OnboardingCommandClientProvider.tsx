@@ -1,8 +1,7 @@
 import { createContext, useContext } from "react";
 import type { OnboardingCommandClient } from "./types";
 
-const OnboardingCommandClientContext =
-  createContext<OnboardingCommandClient | null>(null);
+const OnboardingCommandClientContext = createContext<OnboardingCommandClient | null>(null);
 
 export function OnboardingCommandClientProvider({
   client,

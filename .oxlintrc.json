@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "jsx-a11y", "vitest"],
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "rules": {
+    "jsx-a11y/no-autofocus": "off",
+    "react/react-in-jsx-scope": "off"
+  },
+  "ignorePatterns": ["node_modules/**", "dist/**", "src-tauri/target/**", "src-tauri/gen/**"]
+}
