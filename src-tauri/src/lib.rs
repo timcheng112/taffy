@@ -1,6 +1,7 @@
 mod commands;
-mod database;
-mod onboarding;
+pub mod database;
+pub mod library;
+pub mod onboarding;
 
 use std::sync::Mutex;
 
@@ -21,7 +22,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_learner,
-            commands::complete_onboarding
+            commands::complete_onboarding,
+            commands::get_root_folders,
+            commands::create_root_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running taffy");
