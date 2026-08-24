@@ -1,30 +1,22 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight } from "lucide-react";
-import { useOnboardingCommandClient } from "../commands/OnboardingCommandClientProvider";
-import type { Learner } from "../commands/types";
+import { useCompleteOnboardingMutation } from "../mutations/useCompleteOnboardingMutation";
 
 const schema = z.object({
   displayName: z.string().trim().min(1, "Enter a display name to continue."),
 });
 type FormValues = z.infer<typeof schema>;
 
-export function OnboardingPage({ onCompleted }: { onCompleted: (learner: Learner) => void }) {
-  const client = useOnboardingCommandClient();
+export function OnboardingPage() {
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { displayName: "" },
   });
-  const save = useMutation({
-    mutationFn: (values: FormValues) => client.completeOnboarding(values),
-    onSuccess: onCompleted,
-    onError: () =>
-      setFailure("Taffy could not save your name. Your entry is still here—please try again."),
-  });
+  const save = useCompleteOnboardingMutation();
   return (
     <main className="onboarding-shell">
       <section className="onboarding-card" aria-labelledby="welcome-title">
@@ -35,7 +27,12 @@ export function OnboardingPage({ onCompleted }: { onCompleted: (learner: Learner
         <form
           onSubmit={form.handleSubmit((values) => {
             setFailure(null);
-            save.mutate(values);
+            save.mutate(values, {
+              onError: () =>
+                setFailure(
+                  "Taffy could not save your name. Your entry is still here—please try again.",
+                ),
+            });
           })}
           noValidate
         >

@@ -145,20 +145,85 @@ a:focus-visible {
 .library-workspace {
   padding: clamp(2rem, 6vw, 5rem);
 }
+.library-workspace header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.library-description {
+  margin: 0.45rem 0 0;
+  color: #797593;
+}
+.library-list {
+  overflow: hidden;
+  margin-top: 2rem;
+  border: 1px solid #9893a544;
+  border-radius: 12px;
+}
+.library-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3.25rem;
+  padding: 0.7rem 0.9rem;
+}
+.library-row + .library-row {
+  border-top: 1px solid #9893a533;
+}
+.library-state {
+  margin-top: 2rem;
+}
 .empty-library {
   display: flex;
-  min-height: 22rem;
+  min-height: 18rem;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  margin-top: 2rem;
-  border: 1px solid #9893a544;
-  border-radius: 12px;
   text-align: center;
 }
 .empty-library p {
   margin: 0;
+}
+.empty-library-copy {
+  max-width: 20rem;
+  color: #797593;
+  line-height: 1.45;
+}
+.create-folder-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  color: #fffaf3;
+  background: #907aa9;
+  cursor: pointer;
+}
+.create-folder-row {
+  align-items: flex-start;
+}
+.create-folder-field {
+  flex: 1;
+}
+.create-folder-field input {
+  width: 100%;
+  border: 1px solid #9893a5;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: transparent;
+  color: inherit;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 @media (prefers-color-scheme: dark) {
   .onboarding-card {

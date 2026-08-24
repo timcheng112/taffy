@@ -1,14 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { EmptyLibraryPage } from "../pages/EmptyLibraryPage";
-import { OnboardingPage, useOnboardingCommandClient } from "../features/onboarding";
-import { queryClient } from "./queryClient";
+import { OnboardingPage, useLearnerQuery } from "../features/onboarding";
+import { LibraryPage } from "../pages/LibraryPage";
 
 export function App() {
-  const client = useOnboardingCommandClient();
-  const learnerQuery = useQuery({
-    queryKey: ["onboarding", "learner"],
-    queryFn: () => client.getLearner(),
-  });
+  const learnerQuery = useLearnerQuery();
   if (learnerQuery.isPending) return <main className="startup">Opening your library…</main>;
   if (learnerQuery.isError)
     return (
@@ -16,11 +10,6 @@ export function App() {
         Taffy could not open your local library. Restart taffy and try again.
       </main>
     );
-  if (learnerQuery.data === null)
-    return (
-      <OnboardingPage
-        onCompleted={(learner) => queryClient.setQueryData(["onboarding", "learner"], learner)}
-      />
-    );
-  return <EmptyLibraryPage />;
+  if (learnerQuery.data === null) return <OnboardingPage />;
+  return <LibraryPage />;
 }
