@@ -1,8 +1,16 @@
-import { BookOpen, LibraryBig, Settings } from "lucide-react";
-import { RootFolderList, useRootFoldersQuery } from "../features/library";
+import { useState } from "react";
+import { ArrowUp, ChevronRight, LibraryBig, Settings } from "lucide-react";
+import { FolderList, useFolderViewQuery, useRootFoldersQuery } from "../features/library";
 
 export function LibraryPage() {
+  const [folderId, setFolderId] = useState<number | null>(null);
   const rootFoldersQuery = useRootFoldersQuery();
+  const folderViewQuery = useFolderViewQuery(folderId);
+  const isRoot = folderId === null;
+  const folders = isRoot ? rootFoldersQuery.data : folderViewQuery.data?.childFolders;
+  const isPending = isRoot ? rootFoldersQuery.isPending : folderViewQuery.isPending;
+  const isError = isRoot ? rootFoldersQuery.isError : folderViewQuery.isError;
+  const view = folderViewQuery.data;
   return (
     <main className="app-shell">
       <aside>
@@ -20,19 +28,49 @@ export function LibraryPage() {
       </aside>
       <section className="library-workspace">
         <header>
-          <div>
-            <h1>Library</h1>
-            <p className="library-description">Organize saved learning into Folders.</p>
-          </div>
-          <BookOpen size={22} aria-hidden="true" />
+          <h1>{view?.folder.name ?? "Library"}</h1>
+          <p className="library-description">Organize saved learning into Folders.</p>
+          {view && (
+            <div className="folder-context">
+              <div className="library-navigation">
+                <nav className="breadcrumbs" aria-label="Folder path">
+                  <button type="button" onClick={() => setFolderId(null)}>
+                    Library
+                  </button>
+                  {view.ancestors.map((ancestor) => (
+                    <span key={ancestor.id}>
+                      <ChevronRight size={16} aria-hidden="true" />
+                      <button type="button" onClick={() => setFolderId(ancestor.id)}>
+                        {ancestor.name}
+                      </button>
+                    </span>
+                  ))}
+                  <span aria-current="page">
+                    <ChevronRight size={16} aria-hidden="true" />
+                    {view.folder.name}
+                  </span>
+                </nav>
+              </div>
+              <div className="library-commands">
+                <button
+                  className="up-button"
+                  type="button"
+                  onClick={() => setFolderId(view.ancestors.at(-1)?.id ?? null)}
+                >
+                  <ArrowUp size={17} aria-hidden="true" />
+                  Up
+                </button>
+              </div>
+            </div>
+          )}
         </header>
-        {rootFoldersQuery.isPending && <p className="library-state">Opening your Library…</p>}
-        {rootFoldersQuery.isError && (
+        {isPending && <p className="library-state">Opening your Library…</p>}
+        {isError && (
           <p className="library-state failure" role="alert">
             Taffy could not load your Library. Restart taffy and try again.
           </p>
         )}
-        {rootFoldersQuery.data && <RootFolderList folders={rootFoldersQuery.data} />}
+        {folders && <FolderList folders={folders} parentId={folderId} onOpen={setFolderId} />}
       </section>
     </main>
   );

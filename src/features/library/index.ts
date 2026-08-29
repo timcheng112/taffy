@@ -2,6 +2,6 @@ export {
   LibraryCommandClientProvider,
   useLibraryCommandClient,
 } from "./commands/LibraryCommandClientProvider";
-export { RootFolderList } from "./components/RootFolderList";
-export { useRootFoldersQuery } from "./queries/useRootFoldersQuery";
-export type { Folder, LibraryCommandClient } from "./commands/types";
+export { FolderList } from "./components/RootFolderList";
+export { useFolderViewQuery, useRootFoldersQuery } from "./queries/useRootFoldersQuery";
+export type { Folder, FolderView, LibraryCommandClient } from "./commands/types";

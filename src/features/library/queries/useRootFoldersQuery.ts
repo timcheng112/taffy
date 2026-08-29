@@ -9,3 +9,12 @@ export function useRootFoldersQuery() {
     queryFn: () => client.getRootFolders(),
   });
 }
+
+export function useFolderViewQuery(folderId: number | null) {
+  const client = useLibraryCommandClient();
+  return useQuery({
+    queryKey: libraryQueryKeys.folderView(folderId ?? 0),
+    queryFn: () => client.getFolderView(folderId!),
+    enabled: folderId !== null,
+  });
+}

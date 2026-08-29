@@ -24,7 +24,8 @@ pub fn run() {
             commands::get_learner,
             commands::complete_onboarding,
             commands::get_root_folders,
-            commands::create_root_folder
+            commands::get_folder_view,
+            commands::create_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running taffy");
