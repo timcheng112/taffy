@@ -4,7 +4,7 @@ use std::path::Path;
 use rusqlite::Connection;
 use thiserror::Error;
 
-use crate::library::{Folder, LibraryError};
+use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
 
 #[derive(Debug, Error)]
@@ -154,13 +154,41 @@ impl Database {
         Ok(folders)
     }
 
-    pub fn create_root_folder(&self, value: &str) -> Result<Folder, LibraryError> {
-        let name = Folder::root_name(value)?;
+    pub fn folder_view(&self, folder_id: i64) -> Result<FolderView, LibraryError> {
+        let folder = self
+            .folder_by_id(folder_id)?
+            .ok_or(LibraryError::FolderNotFound)?;
+        let mut ancestors = Vec::new();
+        let mut parent_id = self.parent_id(folder_id)?;
+        while let Some(id) = parent_id {
+            let ancestor = self.folder_by_id(id)?.ok_or(LibraryError::FolderNotFound)?;
+            parent_id = self.parent_id(id)?;
+            ancestors.push(ancestor);
+        }
+        ancestors.reverse();
+        Ok(FolderView {
+            folder,
+            ancestors,
+            child_folders: self.child_folders(Some(folder_id))?,
+        })
+    }
+
+    pub fn create_folder(
+        &self,
+        value: &str,
+        parent_id: Option<i64>,
+    ) -> Result<Folder, LibraryError> {
+        let name = Folder::name(value)?;
+        if let Some(parent_id) = parent_id {
+            if self.folder_by_id(parent_id)?.is_none() {
+                return Err(LibraryError::InvalidParent);
+            }
+        }
         let exists: bool = self
             .connection
             .query_row(
-                "SELECT EXISTS(SELECT 1 FROM folders WHERE parent_id IS NULL AND name = ?1 COLLATE NOCASE)",
-                [&name],
+                "SELECT EXISTS(SELECT 1 FROM folders WHERE parent_id IS ?1 AND name = ?2 COLLATE NOCASE)",
+                rusqlite::params![parent_id, name],
                 |row| row.get(0),
             )
             .map_err(DatabaseError::storage)?;
@@ -168,18 +196,65 @@ impl Database {
             return Err(LibraryError::DuplicateFolderName);
         }
         self.connection
-            .execute("INSERT INTO folders (name) VALUES (?1)", [&name])
+            .execute(
+                "INSERT INTO folders (parent_id, name) VALUES (?1, ?2)",
+                rusqlite::params![parent_id, name],
+            )
             .map_err(DatabaseError::storage)?;
         Ok(Folder {
             id: self.connection.last_insert_rowid(),
             name,
         })
     }
+
+    fn child_folders(&self, parent_id: Option<i64>) -> Result<Vec<Folder>, LibraryError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT id, name FROM folders WHERE parent_id IS ?1 ORDER BY name COLLATE NOCASE",
+            )
+            .map_err(DatabaseError::storage)?;
+        let folders = statement
+            .query_map([parent_id], |row| {
+                Ok(Folder {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            })
+            .map_err(DatabaseError::storage)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| LibraryError::Database(DatabaseError::storage(error)))?;
+        Ok(folders)
+    }
+
+    fn folder_by_id(&self, id: i64) -> Result<Option<Folder>, LibraryError> {
+        self.connection
+            .query_row("SELECT id, name FROM folders WHERE id = ?1", [id], |row| {
+                Ok(Folder {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            })
+            .map(Some)
+            .or_else(|error| match error {
+                rusqlite::Error::QueryReturnedNoRows => Ok(None),
+                error => Err(DatabaseError::storage(error).into()),
+            })
+    }
+
+    fn parent_id(&self, id: i64) -> Result<Option<i64>, LibraryError> {
+        self.connection
+            .query_row("SELECT parent_id FROM folders WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })
+            .map_err(|error| LibraryError::Database(DatabaseError::storage(error)))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Database;
+    use crate::library::Folder;
 
     #[test]
     fn migration_creates_a_fresh_database_and_persists_a_learner() {
@@ -212,7 +287,7 @@ mod tests {
         let database = super::Database { connection };
         let mut database = database;
         database.migrate().unwrap();
-        let folder = database.create_root_folder("  Algorithms  ").unwrap();
+        let folder = database.create_folder("  Algorithms  ", None).unwrap();
         assert_eq!(folder.name, "Algorithms");
         assert_eq!(database.root_folders().unwrap(), vec![folder]);
     }
@@ -220,10 +295,74 @@ mod tests {
     #[test]
     fn root_folder_names_are_case_insensitively_unique() {
         let database = Database::open_in_memory().unwrap();
-        database.create_root_folder("Algorithms").unwrap();
+        database.create_folder("Algorithms", None).unwrap();
         assert!(matches!(
-            database.create_root_folder("algorithms"),
+            database.create_folder("algorithms", None),
             Err(crate::library::LibraryError::DuplicateFolderName)
         ));
+    }
+
+    #[test]
+    fn creates_and_reads_nested_folders() {
+        let database = Database::open_in_memory().unwrap();
+        let algorithms = database.create_folder("Algorithms", None).unwrap();
+        let trees = database
+            .create_folder("Trees", Some(algorithms.id))
+            .unwrap();
+        let graphs = database
+            .create_folder("Graphs", Some(algorithms.id))
+            .unwrap();
+        let view = database.folder_view(algorithms.id).unwrap();
+        assert_eq!(view.child_folders, vec![graphs, trees]);
+        assert!(matches!(
+            database.create_folder("Trees", Some(999)),
+            Err(crate::library::LibraryError::InvalidParent)
+        ));
+        assert!(matches!(
+            database.create_folder("trees", Some(algorithms.id)),
+            Err(crate::library::LibraryError::DuplicateFolderName)
+        ));
+    }
+
+    #[test]
+    fn allows_equal_names_under_different_parents() {
+        let database = Database::open_in_memory().unwrap();
+        let algorithms = database.create_folder("Algorithms", None).unwrap();
+        let data_structures = database.create_folder("Data Structures", None).unwrap();
+        database
+            .create_folder("Graphs", Some(algorithms.id))
+            .unwrap();
+        assert!(database
+            .create_folder("Graphs", Some(data_structures.id))
+            .is_ok());
+    }
+
+    #[test]
+    fn persists_child_folders_after_reopening_the_database() {
+        let path = std::env::temp_dir().join(format!(
+            "taffy-folder-hierarchy-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let database = Database::open(&path).unwrap();
+        let algorithms = database.create_folder("Algorithms", None).unwrap();
+        database
+            .create_folder("Graphs", Some(algorithms.id))
+            .unwrap();
+        drop(database);
+
+        let reopened = Database::open(&path).unwrap();
+        assert_eq!(
+            reopened.folder_view(algorithms.id).unwrap().child_folders,
+            vec![Folder {
+                id: 2,
+                name: "Graphs".to_owned()
+            }]
+        );
+        drop(reopened);
+        std::fs::remove_file(path).unwrap();
     }
 }

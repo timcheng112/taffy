@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::library::{Folder, LibraryError};
+use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
 use crate::AppState;
 
@@ -13,8 +13,9 @@ pub struct CompleteOnboardingRequest {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateRootFolderRequest {
+pub struct CreateFolderRequest {
     name: String,
+    parent_id: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -39,6 +40,8 @@ impl From<LibraryError> for CommandError {
         match error {
             LibraryError::BlankFolderName => Self { code: "blank_folder_name", field: Some("name"), message: "Enter a Folder name." },
             LibraryError::DuplicateFolderName => Self { code: "duplicate_folder_name", field: Some("name"), message: "A Folder with that name already exists here." },
+            LibraryError::InvalidParent => Self { code: "invalid_parent", field: Some("parentId"), message: "That parent Folder no longer exists. Return to the Library and try again." },
+            LibraryError::FolderNotFound => Self { code: "folder_not_found", field: None, message: "That Folder no longer exists. Return to the Library and try again." },
             LibraryError::Database(_) => Self { code: "database_unavailable", field: None, message: "Taffy could not access your local library. Check the app-data folder and try again." },
         }
     }
@@ -90,8 +93,25 @@ pub fn get_root_folders(state: State<'_, AppState>) -> Result<Vec<Folder>, Comma
 }
 
 #[tauri::command]
-pub fn create_root_folder(
-    request: CreateRootFolderRequest,
+pub fn get_folder_view(
+    folder_id: i64,
+    state: State<'_, AppState>,
+) -> Result<FolderView, CommandError> {
+    state
+        .0
+        .lock()
+        .map_err(|_| CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Restart taffy and try again.",
+        })?
+        .folder_view(folder_id)
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn create_folder(
+    request: CreateFolderRequest,
     state: State<'_, AppState>,
 ) -> Result<Folder, CommandError> {
     state
@@ -102,6 +122,6 @@ pub fn create_root_folder(
             field: None,
             message: "Taffy could not access your local library. Restart taffy and try again.",
         })?
-        .create_root_folder(&request.name)
+        .create_folder(&request.name, request.parent_id)
         .map_err(Into::into)
 }

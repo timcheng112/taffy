@@ -10,8 +10,16 @@ pub struct Folder {
     pub name: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderView {
+    pub folder: Folder,
+    pub ancestors: Vec<Folder>,
+    pub child_folders: Vec<Folder>,
+}
+
 impl Folder {
-    pub fn root_name(value: &str) -> Result<String, LibraryError> {
+    pub fn name(value: &str) -> Result<String, LibraryError> {
         let name = value.trim();
         if name.is_empty() {
             return Err(LibraryError::BlankFolderName);
@@ -26,6 +34,10 @@ pub enum LibraryError {
     BlankFolderName,
     #[error("A Folder with that name already exists here.")]
     DuplicateFolderName,
+    #[error("The parent Folder no longer exists.")]
+    InvalidParent,
+    #[error("This Folder no longer exists.")]
+    FolderNotFound,
     #[error(transparent)]
     Database(#[from] DatabaseError),
 }
@@ -35,14 +47,14 @@ mod tests {
     use super::{Folder, LibraryError};
 
     #[test]
-    fn trims_a_valid_root_folder_name() {
-        assert_eq!(Folder::root_name("  Algorithms  ").unwrap(), "Algorithms");
+    fn trims_a_valid_folder_name() {
+        assert_eq!(Folder::name("  Algorithms  ").unwrap(), "Algorithms");
     }
 
     #[test]
-    fn rejects_a_blank_root_folder_name() {
+    fn rejects_a_blank_folder_name() {
         assert!(matches!(
-            Folder::root_name(" \n "),
+            Folder::name(" \n "),
             Err(LibraryError::BlankFolderName)
         ));
     }

@@ -124,7 +124,7 @@ a:focus-visible {
   border-right: 1px solid #9893a533;
   background: color-mix(in srgb, #f2e9de 80%, transparent);
 }
-.app-shell nav {
+.app-shell aside > nav {
   margin-top: 2.5rem;
 }
 .app-shell a {
@@ -146,10 +146,73 @@ a:focus-visible {
   padding: clamp(2rem, 6vw, 5rem);
 }
 .library-workspace header {
+  display: block;
+}
+.library-commands,
+.library-navigation,
+.breadcrumbs,
+.breadcrumbs span {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  align-items: center;
+}
+.library-commands,
+.library-navigation {
+  width: 100%;
+}
+.folder-context {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.library-commands {
+  align-items: center;
+}
+.breadcrumbs {
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  color: #797593;
+  font-size: 0.9rem;
+}
+.breadcrumbs span {
+  gap: 0.25rem;
+}
+.breadcrumbs button,
+.up-button,
+.folder-row {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.breadcrumbs button {
+  padding: 0;
+  color: #907aa9;
+}
+.up-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #9893a566;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  background: #9893a511;
+}
+.folder-row {
+  width: 100%;
+  text-align: left;
+}
+.folder-row:hover,
+.up-button:hover {
+  background: #9893a522;
+}
+.folder-row:focus-visible {
+  position: relative;
+  outline: 0;
+  box-shadow: inset 0 0 0 3px #c4a7e788;
+}
+.library-list > .folder-row:first-child {
+  border-radius: 11px 11px 0 0;
 }
 .library-description {
   margin: 0.45rem 0 0;
@@ -157,7 +220,7 @@ a:focus-visible {
 }
 .library-list {
   overflow: hidden;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   border: 1px solid #9893a544;
   border-radius: 12px;
 }
@@ -203,8 +266,14 @@ a:focus-visible {
   background: #907aa9;
   cursor: pointer;
 }
+.library-list > .create-folder-button {
+  margin: 0.75rem;
+}
 .create-folder-row {
   align-items: flex-start;
+}
+.create-folder-row > svg {
+  margin-top: 0.55rem;
 }
 .create-folder-field {
   flex: 1;
