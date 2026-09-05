@@ -4,4 +4,5 @@ export {
 } from "./commands/LibraryCommandClientProvider";
 export { FolderList } from "./components/RootFolderList";
 export { useFolderViewQuery, useRootFoldersQuery } from "./queries/useRootFoldersQuery";
-export type { Folder, FolderView, LibraryCommandClient } from "./commands/types";
+export { libraryQueryKeys } from "./queries/queryKeys";
+export type { Folder, FolderView, LibraryCommandClient, LibraryContent } from "./commands/types";

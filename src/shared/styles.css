@@ -23,6 +23,41 @@ button,
 input {
   font: inherit;
 }
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  color: #fffaf3;
+  background: #907aa9;
+  cursor: pointer;
+}
+.button:hover:not(:disabled) {
+  background: #79658c;
+}
+.button-secondary {
+  border-color: #9893a566;
+  color: inherit;
+  background: transparent;
+}
+.button-secondary:hover:not(:disabled) {
+  background: #9893a522;
+}
+.button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.input {
+  width: 100%;
+  border: 1px solid #9893a5;
+  border-radius: 8px;
+  padding: 0.7rem 0.75rem;
+  background: transparent;
+  color: inherit;
+}
 .startup {
   display: grid;
   min-height: 100vh;
@@ -166,6 +201,18 @@ a:focus-visible {
 }
 .library-commands {
   align-items: center;
+  gap: 0.75rem;
+}
+.library-root-commands {
+  margin-top: 0.75rem;
+}
+.folder-create-button.button-secondary {
+  border-color: #907aa966;
+  color: #907aa9;
+  background: #907aa911;
+}
+.folder-create-button.button-secondary:hover:not(:disabled) {
+  background: #907aa922;
 }
 .breadcrumbs {
   flex-wrap: wrap;
@@ -211,6 +258,20 @@ a:focus-visible {
   outline: 0;
   box-shadow: inset 0 0 0 3px #c4a7e788;
 }
+.learning-item-row {
+  color: inherit;
+}
+.learning-item-highlight {
+  animation: learning-item-highlight 2s ease-out;
+}
+@keyframes learning-item-highlight {
+  0% {
+    background: #c4a7e777;
+  }
+  100% {
+    background: transparent;
+  }
+}
 .library-list > .folder-row:first-child {
   border-radius: 11px 11px 0 0;
 }
@@ -223,6 +284,18 @@ a:focus-visible {
   margin-top: 1.5rem;
   border: 1px solid #9893a544;
   border-radius: 12px;
+}
+.library-list-loading {
+  display: grid;
+  gap: 1px;
+  padding: 0.75rem;
+  background: #9893a511;
+}
+.library-list-loading span {
+  display: block;
+  height: 2.75rem;
+  border-radius: 8px;
+  background: #9893a522;
 }
 .library-row {
   display: flex;
@@ -285,6 +358,47 @@ a:focus-visible {
   padding: 0.55rem 0.65rem;
   background: transparent;
   color: inherit;
+}
+.learning-item-create {
+  width: min(100%, 48rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0;
+}
+.learning-item-create h1 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(1.8rem, 4vw, 2.45rem);
+  line-height: 1.1;
+}
+.learning-item-path {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1.5rem 0 0;
+  color: #797593;
+  line-height: 1.45;
+}
+.learning-item-path span {
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.learning-item-form {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 2.5rem;
+}
+.learning-item-form > label {
+  font-weight: 600;
+}
+.learning-item-form .input[aria-invalid="true"] {
+  border-color: #b4637a;
+}
+.learning-item-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 .sr-only {
   position: absolute;

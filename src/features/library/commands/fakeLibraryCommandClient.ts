@@ -25,10 +25,11 @@ export function fakeLibraryCommandClient(
       return {
         folder: { id: folder.id, name: folder.name },
         ancestors,
-        childFolders: folders
+        contents: folders
           .filter((candidate) => candidate.parentId === folderId)
           .map(({ id, name }) => ({ id, name }))
-          .sort((left, right) => left.name.localeCompare(right.name)),
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .map((childFolder) => ({ type: "folder" as const, value: childFolder })),
       };
     },
     createFolder: async ({ name, parentId }) => {

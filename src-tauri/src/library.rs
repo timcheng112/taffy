@@ -2,6 +2,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::database::DatabaseError;
+use crate::learning_items::LearningItem;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,7 +16,14 @@ pub struct Folder {
 pub struct FolderView {
     pub folder: Folder,
     pub ancestors: Vec<Folder>,
-    pub child_folders: Vec<Folder>,
+    pub contents: Vec<FolderContent>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "type", content = "value", rename_all = "camelCase")]
+pub enum FolderContent {
+    Folder(Folder),
+    LearningItem(LearningItem),
 }
 
 impl Folder {

@@ -2,8 +2,12 @@ export type Folder = { id: number; name: string };
 export type FolderView = {
   folder: Folder;
   ancestors: Folder[];
-  childFolders: Folder[];
+  contents: LibraryContent[];
 };
+
+export type LibraryContent =
+  | { type: "folder"; value: Folder }
+  | { type: "learningItem"; value: { id: number; folderId: number; title: string } };
 
 export type LibraryCommandClient = {
   getRootFolders(): Promise<Folder[]>;

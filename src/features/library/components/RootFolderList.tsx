@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FolderPlus, Folder as FolderIcon, LibraryBig } from "lucide-react";
+import { FileText, FolderPlus, Folder as FolderIcon, LibraryBig } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCreateFolderMutation } from "../mutations/useCreateRootFolderMutation";
-import type { Folder } from "../commands/types";
+import type { LibraryContent } from "../commands/types";
 
 const folderSchema = z.object({
   name: z.string().trim().min(1, "Enter a Folder name."),
@@ -28,22 +28,34 @@ function creationFailure(error: unknown) {
 }
 
 export function FolderList({
-  folders,
+  contents,
   parentId,
   onOpen,
+  highlightedLearningItemId,
+  isCreatingFolder: controlledIsCreatingFolder,
+  onCreatingFolderChange,
+  hideCreateFolderAction = false,
 }: {
-  folders: Folder[];
+  contents: LibraryContent[];
   parentId: number | null;
-  onOpen: (folderId: number) => void;
+  onOpen: (folder: { id: number; name: string }) => void;
+  highlightedLearningItemId?: number | null;
+  isCreatingFolder?: boolean;
+  onCreatingFolderChange?: (isCreating: boolean) => void;
+  hideCreateFolderAction?: boolean;
 }) {
-  const [isCreating, setIsCreating] = useState(false);
+  const [uncontrolledIsCreating, setUncontrolledIsCreating] = useState(false);
+  const isCreating = controlledIsCreatingFolder ?? uncontrolledIsCreating;
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<FolderFormValues>({
     resolver: zodResolver(folderSchema),
     defaultValues: { name: "" },
   });
   const createFolder = useCreateFolderMutation(parentId);
-
+  function setIsCreating(next: boolean) {
+    if (onCreatingFolderChange) onCreatingFolderChange(next);
+    else setUncontrolledIsCreating(next);
+  }
   function cancel() {
     form.reset();
     setFailure(null);
@@ -93,35 +105,75 @@ export function FolderList({
           </div>
         </form>
       )}
-      {folders.map((folder) => (
-        <button
-          className="library-row folder-row"
-          key={folder.id}
-          type="button"
-          onClick={() => onOpen(folder.id)}
-        >
-          <FolderIcon size={18} aria-hidden="true" />
-          <span>{folder.name}</span>
-        </button>
-      ))}
-      {folders.length === 0 && !isCreating && (
+      {contents.map((content) =>
+        content.type === "folder" ? (
+          <button
+            className="library-row folder-row"
+            key={`folder-${content.value.id}`}
+            type="button"
+            onClick={() => onOpen(content.value)}
+          >
+            <FolderIcon size={18} aria-hidden="true" />
+            <span>{content.value.name}</span>
+          </button>
+        ) : (
+          <div
+            className={`library-row learning-item-row${
+              content.value.id === highlightedLearningItemId ? " learning-item-highlight" : ""
+            }`}
+            key={`learning-item-${content.value.id}`}
+            ref={
+              content.value.id === highlightedLearningItemId
+                ? (node) => node?.scrollIntoView?.({ behavior: "smooth", block: "nearest" })
+                : undefined
+            }
+          >
+            <FileText size={18} aria-hidden="true" />
+            <span>{content.value.title}</span>
+          </div>
+        ),
+      )}
+      {contents.length === 0 && !isCreating && (
         <div className="empty-library">
           <LibraryBig size={28} aria-hidden="true" />
-          <p>No folders yet.</p>
-          <p className="empty-library-copy">
-            Create your first Folder to start adding Learning Items.
-          </p>
-          <button
-            className="create-folder-button"
-            type="button"
-            onClick={() => setIsCreating(true)}
-          >
-            <FolderPlus size={17} aria-hidden="true" />
-            Create Folder
-          </button>
+          {parentId === null ? (
+            <>
+              <p>No folders yet.</p>
+              <p className="empty-library-copy">
+                Create your first Folder to start adding Learning Items.
+              </p>
+              {!hideCreateFolderAction && (
+                <button
+                  className="create-folder-button"
+                  type="button"
+                  onClick={() => setIsCreating(true)}
+                >
+                  <FolderPlus size={17} aria-hidden="true" />
+                  Create Folder
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <p>No Learning Items or Folders yet.</p>
+              <p className="empty-library-copy">
+                Create a Learning Item or child Folder to start organizing what you retain.
+              </p>
+              {!hideCreateFolderAction && (
+                <button
+                  className="create-folder-button"
+                  type="button"
+                  onClick={() => setIsCreating(true)}
+                >
+                  <FolderPlus size={17} aria-hidden="true" />
+                  Create Folder
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
-      {!isCreating && folders.length > 0 && (
+      {!hideCreateFolderAction && !isCreating && contents.length > 0 && (
         <button className="create-folder-button" type="button" onClick={() => setIsCreating(true)}>
           <FolderPlus size={17} aria-hidden="true" />
           Create Folder

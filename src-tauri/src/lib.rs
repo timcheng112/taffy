@@ -1,7 +1,9 @@
 mod commands;
 pub mod database;
+pub mod learning_items;
 pub mod library;
 pub mod onboarding;
+pub mod scheduling;
 
 use std::sync::Mutex;
 
@@ -25,7 +27,8 @@ pub fn run() {
             commands::complete_onboarding,
             commands::get_root_folders,
             commands::get_folder_view,
-            commands::create_folder
+            commands::create_folder,
+            commands::create_learning_item
         ])
         .run(tauri::generate_context!())
         .expect("error while running taffy");

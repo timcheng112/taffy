@@ -10,9 +10,12 @@ import { LibraryPage } from "../../../pages/LibraryPage";
 function FolderListHarness({ parentId = null }: { parentId?: number | null }) {
   const rootFoldersQuery = useRootFoldersQuery();
   const folderViewQuery = useFolderViewQuery(parentId);
-  const folders = parentId === null ? rootFoldersQuery.data : folderViewQuery.data?.childFolders;
-  if (!folders) return null;
-  return <FolderList folders={folders} parentId={parentId} onOpen={() => {}} />;
+  const contents =
+    parentId === null
+      ? rootFoldersQuery.data?.map((folder) => ({ type: "folder" as const, value: folder }))
+      : folderViewQuery.data?.contents;
+  if (!contents) return null;
+  return <FolderList contents={contents} parentId={parentId} onOpen={() => {}} />;
 }
 
 function renderList() {
