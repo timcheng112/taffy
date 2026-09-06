@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::learning_items::{LearningItem, LearningItemsError};
 use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
 use crate::AppState;
@@ -16,6 +17,13 @@ pub struct CompleteOnboardingRequest {
 pub struct CreateFolderRequest {
     name: String,
     parent_id: Option<i64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateLearningItemRequest {
+    folder_id: i64,
+    title: String,
 }
 
 #[derive(Serialize)]
@@ -43,6 +51,17 @@ impl From<LibraryError> for CommandError {
             LibraryError::InvalidParent => Self { code: "invalid_parent", field: Some("parentId"), message: "That parent Folder no longer exists. Return to the Library and try again." },
             LibraryError::FolderNotFound => Self { code: "folder_not_found", field: None, message: "That Folder no longer exists. Return to the Library and try again." },
             LibraryError::Database(_) => Self { code: "database_unavailable", field: None, message: "Taffy could not access your local library. Check the app-data folder and try again." },
+        }
+    }
+}
+
+impl From<LearningItemsError> for CommandError {
+    fn from(error: LearningItemsError) -> Self {
+        match error {
+            LearningItemsError::BlankTitle => Self { code: "blank_learning_item_title", field: Some("title"), message: "Enter a Learning Item title." },
+            LearningItemsError::DuplicateTitle => Self { code: "duplicate_learning_item_title", field: Some("title"), message: "A Learning Item with that title already exists in this Folder." },
+            LearningItemsError::InvalidFolder => Self { code: "invalid_folder", field: Some("folderId"), message: "That Folder no longer exists. Return to the Library and try again." },
+            LearningItemsError::Database(_) => Self { code: "database_unavailable", field: None, message: "Taffy could not access your local library. Check the app-data folder and try again." },
         }
     }
 }
@@ -123,5 +142,22 @@ pub fn create_folder(
             message: "Taffy could not access your local library. Restart taffy and try again.",
         })?
         .create_folder(&request.name, request.parent_id)
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn create_learning_item(
+    request: CreateLearningItemRequest,
+    state: State<'_, AppState>,
+) -> Result<LearningItem, CommandError> {
+    state
+        .0
+        .lock()
+        .map_err(|_| CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Restart taffy and try again.",
+        })?
+        .create_learning_item(&request.title, request.folder_id)
         .map_err(Into::into)
 }

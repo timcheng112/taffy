@@ -1,4 +1,5 @@
-import { OnboardingPage, useLearnerQuery } from "../features/onboarding";
+import { OnboardingPage } from "../features/onboarding/components/OnboardingPage";
+import { useLearnerQuery } from "../features/onboarding/queries/useLearnerQuery";
 import { LibraryPage } from "../pages/LibraryPage";
 
 export function App() {

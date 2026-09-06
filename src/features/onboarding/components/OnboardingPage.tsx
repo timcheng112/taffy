@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight } from "lucide-react";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import { useCompleteOnboardingMutation } from "../mutations/useCompleteOnboardingMutation";
 
 const schema = z.object({
@@ -37,7 +39,7 @@ export function OnboardingPage() {
           noValidate
         >
           <label htmlFor="display-name">Display name</label>
-          <input
+          <Input
             id="display-name"
             autoFocus
             autoComplete="name"
@@ -53,9 +55,9 @@ export function OnboardingPage() {
               {failure}
             </p>
           )}
-          <button type="submit" disabled={save.isPending}>
+          <Button className="onboarding-submit-button" type="submit" disabled={save.isPending}>
             Continue <ArrowRight size={16} aria-hidden="true" />
-          </button>
+          </Button>
         </form>
       </section>
     </main>
