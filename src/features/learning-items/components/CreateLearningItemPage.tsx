@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import type { Folder } from "../../library";
+import type { Folder } from "../../library/commands/types";
 import { useCreateLearningItemMutation } from "../mutations/useCreateLearningItemMutation";
 import { learningItemsCommandError, type LearningItem } from "../commands/types";
 

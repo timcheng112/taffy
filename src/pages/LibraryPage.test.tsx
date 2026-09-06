@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LearningItemsCommandClientProvider } from "../features/learning-items";
+import { LearningItemsCommandClientProvider } from "../features/learning-items/commands/LearningItemsCommandClientProvider";
 import { fakeLearningItemsCommandClient } from "../features/learning-items/commands/fakeLearningItemsCommandClient";
-import { LibraryCommandClientProvider } from "../features/library";
-import type { LibraryCommandClient } from "../features/library";
+import { LibraryCommandClientProvider } from "../features/library/commands/LibraryCommandClientProvider";
+import type { LibraryCommandClient } from "../features/library/commands/types";
 import { LibraryPage } from "./LibraryPage";
 
 it("creates from a Folder only, then returns to the highlighted backend-ordered row", async () => {

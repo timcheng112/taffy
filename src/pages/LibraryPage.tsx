@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { ArrowUp, ChevronRight, FilePlus2, FolderPlus, LibraryBig, Settings } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { CreateLearningItemPage } from "../features/learning-items";
+import { CreateLearningItemPage } from "../features/learning-items/components/CreateLearningItemPage";
+import type { Folder, FolderView, LibraryContent } from "../features/library/commands/types";
+import { FolderList } from "../features/library/components/RootFolderList";
 import {
-  FolderList,
-  type Folder,
-  type FolderView,
-  type LibraryContent,
   useFolderViewQuery,
   useRootFoldersQuery,
-} from "../features/library";
+} from "../features/library/queries/useRootFoldersQuery";
+
+type LibraryPageMode = "contents" | "create-learning-item";
 
 export function LibraryPage() {
   const [folderId, setFolderId] = useState<number | null>(null);
@@ -17,7 +17,7 @@ export function LibraryPage() {
     FolderView,
     "folder" | "ancestors"
   > | null>(null);
-  const [isCreatingLearningItem, setIsCreatingLearningItem] = useState(false);
+  const [pageMode, setPageMode] = useState<LibraryPageMode>("contents");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [highlightedLearningItemId, setHighlightedLearningItemId] = useState<number | null>(null);
   const rootFoldersQuery = useRootFoldersQuery();
@@ -33,7 +33,7 @@ export function LibraryPage() {
   const isOpeningFolder = !isRoot && !view && folderViewQuery.isPending;
 
   function openRoot() {
-    setIsCreatingLearningItem(false);
+    setPageMode("contents");
     setIsCreatingFolder(false);
     setHighlightedLearningItemId(null);
     setPendingFolderContext(null);
@@ -41,7 +41,7 @@ export function LibraryPage() {
   }
 
   function openFolder(folder: Folder) {
-    setIsCreatingLearningItem(false);
+    setPageMode("contents");
     setIsCreatingFolder(false);
     setHighlightedLearningItemId(null);
     setPendingFolderContext({
@@ -52,7 +52,7 @@ export function LibraryPage() {
   }
 
   function openKnownFolder(folder: Folder, ancestors: Folder[]) {
-    setIsCreatingLearningItem(false);
+    setPageMode("contents");
     setIsCreatingFolder(false);
     setHighlightedLearningItemId(null);
     setPendingFolderContext({ folder, ancestors });
@@ -75,14 +75,14 @@ export function LibraryPage() {
         </a>
       </aside>
       <section className="library-workspace">
-        {isCreatingLearningItem && view ? (
+        {pageMode === "create-learning-item" && view ? (
           <CreateLearningItemPage
             ancestors={view.ancestors}
             folder={view.folder}
-            onCancel={() => setIsCreatingLearningItem(false)}
+            onCancel={() => setPageMode("contents")}
             onCreated={(learningItem) => {
               setHighlightedLearningItemId(learningItem.id);
-              setIsCreatingLearningItem(false);
+              setPageMode("contents");
             }}
           />
         ) : (
@@ -120,9 +120,10 @@ export function LibraryPage() {
                     </nav>
                   </div>
                   <div className="library-commands">
-                    <button
+                    <Button
                       className="up-button"
                       type="button"
+                      variant="secondary"
                       disabled={isOpeningFolder}
                       onClick={() => {
                         const parent = folderContext.ancestors.at(-1);
@@ -135,11 +136,11 @@ export function LibraryPage() {
                     >
                       <ArrowUp size={17} aria-hidden="true" />
                       Up
-                    </button>
+                    </Button>
                     <Button
                       className="new-learning-item-button"
                       disabled={isOpeningFolder}
-                      onClick={() => setIsCreatingLearningItem(true)}
+                      onClick={() => setPageMode("create-learning-item")}
                     >
                       <FilePlus2 size={17} aria-hidden="true" />
                       New Learning Item

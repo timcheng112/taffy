@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { libraryQueryKeys } from "../../library";
+import { libraryQueryKeys } from "../../library/queries/queryKeys";
 import { useLearningItemsCommandClient } from "../commands/LearningItemsCommandClientProvider";
 import { learningItemsQueryKeys } from "../queries/queryKeys";
 

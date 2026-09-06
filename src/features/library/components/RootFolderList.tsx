@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, FolderPlus, Folder as FolderIcon, LibraryBig } from "lucide-react";
+import { FileText, FolderPlus, Folder as FolderIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import { useCreateFolderMutation } from "../mutations/useCreateRootFolderMutation";
 import type { LibraryContent } from "../commands/types";
+import { LibraryEmptyState } from "./LibraryEmptyState";
 
 const folderSchema = z.object({
   name: z.string().trim().min(1, "Enter a Folder name."),
@@ -81,7 +84,8 @@ export function FolderList({
             <label className="sr-only" htmlFor="folder-name">
               Folder name
             </label>
-            <input
+            <Input
+              className="compact-folder-input"
               id="folder-name"
               autoFocus
               aria-invalid={Boolean(form.formState.errors.name)}
@@ -134,50 +138,32 @@ export function FolderList({
         ),
       )}
       {contents.length === 0 && !isCreating && (
-        <div className="empty-library">
-          <LibraryBig size={28} aria-hidden="true" />
-          {parentId === null ? (
-            <>
-              <p>No folders yet.</p>
-              <p className="empty-library-copy">
-                Create your first Folder to start adding Learning Items.
-              </p>
-              {!hideCreateFolderAction && (
-                <button
-                  className="create-folder-button"
-                  type="button"
-                  onClick={() => setIsCreating(true)}
-                >
-                  <FolderPlus size={17} aria-hidden="true" />
-                  Create Folder
-                </button>
-              )}
-            </>
-          ) : (
-            <>
-              <p>No Learning Items or Folders yet.</p>
-              <p className="empty-library-copy">
-                Create a Learning Item or child Folder to start organizing what you retain.
-              </p>
-              {!hideCreateFolderAction && (
-                <button
-                  className="create-folder-button"
-                  type="button"
-                  onClick={() => setIsCreating(true)}
-                >
-                  <FolderPlus size={17} aria-hidden="true" />
-                  Create Folder
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        <LibraryEmptyState
+          title={parentId === null ? "No folders yet." : "No Learning Items or Folders yet."}
+          description={
+            parentId === null
+              ? "Create your first Folder to start adding Learning Items."
+              : "Create a Learning Item or child Folder to start organizing what you retain."
+          }
+          action={
+            !hideCreateFolderAction && (
+              <Button
+                className="create-folder-button"
+                type="button"
+                onClick={() => setIsCreating(true)}
+              >
+                <FolderPlus size={17} aria-hidden="true" />
+                Create Folder
+              </Button>
+            )
+          }
+        />
       )}
       {!hideCreateFolderAction && !isCreating && contents.length > 0 && (
-        <button className="create-folder-button" type="button" onClick={() => setIsCreating(true)}>
+        <Button className="create-folder-button" onClick={() => setIsCreating(true)}>
           <FolderPlus size={17} aria-hidden="true" />
           Create Folder
-        </button>
+        </Button>
       )}
     </div>
   );
