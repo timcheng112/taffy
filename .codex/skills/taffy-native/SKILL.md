@@ -58,15 +58,22 @@ Before handoff verify: durable source of truth and owner are explicit; Tauri rem
 
 ```markdown
 ## Tsunade Handoff — <capability>
+
 ### Scope and architecture constraints
+
 - Invariants / ownership / source records:
 - Rust, Tauri, SQLite files changed:
+
 ### Durable contract
+
 - Command request/result/stable errors:
 - Schema/migration lineage and compatibility:
 - Transaction boundary, constraints, rollback/recovery, time semantics:
+
 ### Evidence
+
 - Domain, real SQLite, migration, and command tests with results:
 - Frontend coordination required:
+
 ### Deferrals, risks, blockers
 ```

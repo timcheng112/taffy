@@ -66,18 +66,30 @@ Verify acceptance criteria, valid/invalid transitions, persistence/restart, fron
 
 ```markdown
 ## Shino QA — <iteration>
+
 ### Environment and scope
+
 - Platform/build/test harness:
 - Brief, Deidara Page matrix, and risks tested:
+
 ### Results
+
 | Scenario | Evidence/command | Result | What it proves |
-| --- | --- | --- | --- |
+| -------- | ---------------- | ------ | -------------- |
+
 ### Bugs
+
 #### [SEVERITY] <title>
+
 - Preconditions, steps, expected/actual, impact, reproducibility:
+
 ### Human QA / screenshots
+
 - Required checklist and status:
+
 ### Untested areas and residual risk
+
 ### Verdict
+
 - pass | changes required | blocked | not applicable
 ```

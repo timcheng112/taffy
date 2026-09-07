@@ -96,17 +96,25 @@ Use `pass` when no actionable material issue remains. Use `changes required` for
 
 ```markdown
 ## Itachi Review — <iteration>
+
 ### Scope and evidence
+
 - Brief/decisions/diff/tests inspected:
 - Activated lanes:
+
 ### Findings
+
 #### [SEVERITY] <title>
+
 - Location:
 - Violated expectation:
 - Reproduction/scenario:
 - Impact and evidence:
 - Minimum remediation direction:
+
 ### Residual risk / untested evidence
+
 ### Verdict
+
 - pass | changes required | blocked
 ```

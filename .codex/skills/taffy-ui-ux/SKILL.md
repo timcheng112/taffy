@@ -78,12 +78,15 @@ Deidara describes the intended UI precisely enough for Sakura to implement witho
 ## Deidara Visual Handoff — <capability>
 
 ### Sources and scope
+
 - Approved brief / patterns inspected:
 - Learner task and success signal:
 - In scope / explicitly deferred:
 
 ### Page specification
+
 #### <Page or state name>
+
 - Regions in visual order: sidebar / header / main / secondary area.
 - Exact content and hierarchy in each region:
 - Primary action, secondary actions, and exact visible labels:
@@ -92,18 +95,22 @@ Deidara describes the intended UI precisely enough for Sakura to implement witho
 - Normal desktop layout, overflow/scroll behavior, and narrow-window transformation:
 
 ### State matrix
+
 | Trigger/state | Exact visible content | Enabled actions | Preserved context | Recovery | Focus destination |
-| --- | --- | --- | --- | --- | --- |
+| ------------- | --------------------- | --------------- | ----------------- | -------- | ----------------- |
 
 ### Interaction and accessibility
+
 - Semantic structure, accessible names, keyboard actions, focus order/return:
 - Validation/error announcements, contrast/non-color signals, reduced motion:
 
 ### Visual QA
+
 | Page/state | Viewport/theme | Expected visual result | Human check? |
-| --- | --- | --- | --- |
+| ---------- | -------------- | ---------------------- | ------------ |
 
 ### Decision record
+
 - Reused pattern/token and rationale:
 - New pattern/token (if any), reuse boundary, and owner of unresolved question:
 ```

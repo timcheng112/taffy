@@ -66,18 +66,27 @@ Before handoff confirm requirement/design fidelity, correct state ownership, nec
 
 ```markdown
 ## Sakura Handoff — <capability>
+
 ### Scope and sources
+
 - Brief, Deidara Page contract, and Shikamaru constraints honored:
 - Files and public seams changed:
+
 ### Behavior and data contract
+
 - Command/client request-result-error contract:
 - Query keys, mutation, invalidation, draft/error behavior:
+
 ### Page realization
+
 - Deidara Pages/states implemented:
 - Accessibility/focus and narrow-window behavior:
+
 ### Evidence
+
 - Commands and results:
 - Tests by layer and what each proves:
 - Visual QA targets:
+
 ### Deferrals, risks, blockers
 ```

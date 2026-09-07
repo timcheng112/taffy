@@ -59,21 +59,33 @@ Kakashi's handoff gives Naruto the approved status and exact next safe action. I
 
 ```markdown
 # Iteration Brief — <iteration>
+
 ## Learner outcome and scope
+
 - Learner story / success signal:
 - In scope / deferred / non-goals:
+
 ## Behavior and durable contract
+
 - Entry, action, success, recovery, Page states/context:
 - Domain nouns, ownership, invariants, transition/failure/recovery:
+
 ## Acceptance evidence
+
 - Observable checks, test seams, visual/human/staging need:
+
 ## Decisions, risks, assumptions
+
 | Item | Recommendation | Owner | Why it matters |
-| --- | --- | --- | --- |
+| ---- | -------------- | ----- | -------------- |
+
 ## Dispatch manifest
+
 | Role | Input | Write/read authority | Deliverable | Dependency | Gate evidence |
-| --- | --- | --- | --- | --- | --- |
+| ---- | ----- | -------------------- | ----------- | ---------- | ------------- |
+
 ## Approval
+
 - Proposed | approved by user/date | next safe action:
 ```
 

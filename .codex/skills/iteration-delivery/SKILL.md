@@ -59,20 +59,30 @@ Report meaningful milestones and a compact final evidence summary: scope complet
 
 ```markdown
 # Delivery — <iteration>
+
 ## Identity and authorization
+
 - Brief / branch-worktree / lease:
 - Current phase:
 - Authorization ledger:
+
 ## Task board
+
 | Role/task | Status | Dependency/contract | Evidence | Owner handoff | Next action |
-| --- | --- | --- | --- | --- | --- |
+| --------- | ------ | ------------------- | -------- | ------------- | ----------- |
+
 ## Decisions and blockers
+
 | Item | Source/owner | Status | Resolution or escalation |
-| --- | --- | --- | --- |
+| ---- | ------------ | ------ | ------------------------ |
+
 ## Gate record
+
 | Gate | Required? | Verdict | Evidence / exception |
-| --- | --- | --- | --- |
+| ---- | --------- | ------- | -------------------- |
+
 ## Handoff summary
+
 - Completed scope / explicit deferrals:
 - Residual risk / human QA / delivery authorization needed:
 - Exactly one next safe action:

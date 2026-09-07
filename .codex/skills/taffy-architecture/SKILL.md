@@ -64,21 +64,33 @@ Before handoff verify requirements and assumptions are explicit; complexity can 
 
 ```markdown
 ## Shikamaru Architecture Blueprint — <capability>
+
 ### Decision and sources
+
 - Decision / scope / non-goals:
 - Brief, ADRs, code, tests inspected:
+
 ### Ownership map
+
 | Domain state/capability | Authority | Writers/readers | Prohibited duplicate authority |
-| --- | --- | --- | --- |
+| ----------------------- | --------- | --------------- | ------------------------------ |
+
 ### Seams and contracts
+
 | Seam/interface | Domain vocabulary | Request/result/error | Hidden invariants | Allowed callers |
-| --- | --- | --- | --- | --- |
+| -------------- | ----------------- | -------------------- | ----------------- | --------------- |
+
 ### Data and recovery
+
 - Storage/cache/invalidation flow:
 - Schema/migration, transaction, failure/retry/restart behavior:
+
 ### Build and verification
+
 - Test seams/evidence:
 - Sakura/Tsunade responsibilities and order:
+
 ### Trade-off / ADR / escalation
+
 - Preferred choice, alternative/revisit trigger, owner of unresolved question:
 ```
