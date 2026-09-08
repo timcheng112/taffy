@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::learning_items::{LearningItem, LearningItemsError};
+use crate::learning_items::{LearningItem, LearningItemDetail, LearningItemsError};
 use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
 use crate::AppState;
@@ -23,6 +23,13 @@ pub struct CreateFolderRequest {
 #[serde(rename_all = "camelCase")]
 pub struct CreateLearningItemRequest {
     folder_id: i64,
+    title: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateLearningItemTitleRequest {
+    learning_item_id: i64,
     title: String,
 }
 
@@ -59,8 +66,10 @@ impl From<LearningItemsError> for CommandError {
     fn from(error: LearningItemsError) -> Self {
         match error {
             LearningItemsError::BlankTitle => Self { code: "blank_learning_item_title", field: Some("title"), message: "Enter a Learning Item title." },
+            LearningItemsError::TitleTooLong => Self { code: "learning_item_title_too_long", field: Some("title"), message: "Keep Learning Item titles to 120 characters or fewer." },
             LearningItemsError::DuplicateTitle => Self { code: "duplicate_learning_item_title", field: Some("title"), message: "A Learning Item with that title already exists in this Folder." },
             LearningItemsError::InvalidFolder => Self { code: "invalid_folder", field: Some("folderId"), message: "That Folder no longer exists. Return to the Library and try again." },
+            LearningItemsError::LearningItemNotFound => Self { code: "learning_item_not_found", field: None, message: "That Learning Item no longer exists. Return to the Folder and try again." },
             LearningItemsError::Database(_) => Self { code: "database_unavailable", field: None, message: "Taffy could not access your local library. Check the app-data folder and try again." },
         }
     }
@@ -160,4 +169,70 @@ pub fn create_learning_item(
         })?
         .create_learning_item(&request.title, request.folder_id)
         .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn get_learning_item_detail(
+    learning_item_id: i64,
+    state: State<'_, AppState>,
+) -> Result<LearningItemDetail, CommandError> {
+    state
+        .0
+        .lock()
+        .map_err(|_| CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Restart taffy and try again.",
+        })?
+        .learning_item_detail(learning_item_id)
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub fn update_learning_item_title(
+    request: UpdateLearningItemTitleRequest,
+    state: State<'_, AppState>,
+) -> Result<LearningItemDetail, CommandError> {
+    state
+        .0
+        .lock()
+        .map_err(|_| CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Restart taffy and try again.",
+        })?
+        .update_learning_item_title(request.learning_item_id, &request.title)
+        .map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CommandError;
+    use crate::database::DatabaseError;
+    use crate::learning_items::LearningItemsError;
+
+    #[test]
+    fn maps_learning_item_detail_errors_to_stable_command_failures() {
+        let missing = CommandError::from(LearningItemsError::LearningItemNotFound);
+        assert_eq!(missing.code, "learning_item_not_found");
+        assert_eq!(missing.field, None);
+
+        let blank = CommandError::from(LearningItemsError::BlankTitle);
+        assert_eq!(blank.code, "blank_learning_item_title");
+        assert_eq!(blank.field, Some("title"));
+
+        let too_long = CommandError::from(LearningItemsError::TitleTooLong);
+        assert_eq!(too_long.code, "learning_item_title_too_long");
+        assert_eq!(too_long.field, Some("title"));
+
+        let duplicate = CommandError::from(LearningItemsError::DuplicateTitle);
+        assert_eq!(duplicate.code, "duplicate_learning_item_title");
+        assert_eq!(duplicate.field, Some("title"));
+
+        let unavailable = CommandError::from(LearningItemsError::Database(DatabaseError::Storage(
+            rusqlite::Error::QueryReturnedNoRows,
+        )));
+        assert_eq!(unavailable.code, "database_unavailable");
+        assert_eq!(unavailable.field, None);
+    }
 }

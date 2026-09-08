@@ -1,10 +1,12 @@
 use std::fs;
 use std::path::Path;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, Transaction};
 use thiserror::Error;
 
-use crate::learning_items::{LearningItem, LearningItemsError};
+use crate::learning_items::{
+    LearningItem, LearningItemDetail, LearningItemFolder, LearningItemsError,
+};
 use crate::library::{Folder, FolderContent, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
 use crate::scheduling::{first_review_date, LocalDateClock, SystemLocalDateClock};
@@ -286,6 +288,138 @@ impl Database {
             .map_err(DatabaseError::storage)?;
         transaction.commit().map_err(DatabaseError::storage)?;
         Ok(learning_item)
+    }
+
+    pub fn learning_item_detail(
+        &self,
+        learning_item_id: i64,
+    ) -> Result<LearningItemDetail, LearningItemsError> {
+        let transaction = self
+            .connection
+            .unchecked_transaction()
+            .map_err(DatabaseError::storage)?;
+        let detail = Self::learning_item_detail_in_transaction(&transaction, learning_item_id)?;
+        transaction.commit().map_err(DatabaseError::storage)?;
+        Ok(detail)
+    }
+
+    pub fn update_learning_item_title(
+        &self,
+        learning_item_id: i64,
+        value: &str,
+    ) -> Result<LearningItemDetail, LearningItemsError> {
+        let title = LearningItem::title(value)?;
+        let transaction = self
+            .connection
+            .unchecked_transaction()
+            .map_err(DatabaseError::storage)?;
+        let folder_id: i64 = transaction
+            .query_row(
+                "SELECT folder_id FROM learning_items WHERE id = ?1",
+                [learning_item_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| match error {
+                rusqlite::Error::QueryReturnedNoRows => LearningItemsError::LearningItemNotFound,
+                error => DatabaseError::storage(error).into(),
+            })?;
+        let duplicate_exists: bool = transaction
+            .query_row(
+                "SELECT EXISTS(
+                    SELECT 1 FROM learning_items
+                    WHERE folder_id = ?1 AND title = ?2 COLLATE NOCASE AND id != ?3
+                 )",
+                rusqlite::params![folder_id, title, learning_item_id],
+                |row| row.get(0),
+            )
+            .map_err(DatabaseError::storage)?;
+        if duplicate_exists {
+            return Err(LearningItemsError::DuplicateTitle);
+        }
+        transaction
+            .execute(
+                "UPDATE learning_items SET title = ?1 WHERE id = ?2",
+                rusqlite::params![title, learning_item_id],
+            )
+            .map_err(DatabaseError::storage)?;
+        let detail = Self::learning_item_detail_in_transaction(&transaction, learning_item_id)?;
+        transaction.commit().map_err(DatabaseError::storage)?;
+        Ok(detail)
+    }
+
+    fn learning_item_detail_in_transaction(
+        transaction: &Transaction<'_>,
+        learning_item_id: i64,
+    ) -> Result<LearningItemDetail, LearningItemsError> {
+        let detail_row = transaction.query_row(
+            "SELECT learning_items.id, learning_items.title, folders.id, folders.name,
+                    pending_schedules.review_date
+             FROM learning_items
+             JOIN folders ON folders.id = learning_items.folder_id
+             JOIN pending_schedules ON pending_schedules.learning_item_id = learning_items.id
+             WHERE learning_items.id = ?1",
+            [learning_item_id],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
+        );
+        let (id, title, folder_id, folder_name, review_date): (i64, String, i64, String, String) =
+            match detail_row {
+                Ok(detail) => detail,
+                Err(rusqlite::Error::QueryReturnedNoRows) => {
+                    let item_exists: bool = transaction
+                        .query_row(
+                            "SELECT EXISTS(SELECT 1 FROM learning_items WHERE id = ?1)",
+                            [learning_item_id],
+                            |row| row.get(0),
+                        )
+                        .map_err(DatabaseError::storage)?;
+                    if item_exists {
+                        return Err(
+                            DatabaseError::storage(rusqlite::Error::QueryReturnedNoRows).into()
+                        );
+                    }
+                    return Err(LearningItemsError::LearningItemNotFound);
+                }
+                Err(error) => return Err(DatabaseError::storage(error).into()),
+            };
+        let mut statement = transaction
+            .prepare(
+                "WITH RECURSIVE ancestors(id, name, parent_id, depth) AS (
+                   SELECT id, name, parent_id, 0 FROM folders WHERE id = ?1
+                   UNION ALL
+                   SELECT folders.id, folders.name, folders.parent_id, ancestors.depth + 1
+                   FROM folders JOIN ancestors ON folders.id = ancestors.parent_id
+                 )
+                 SELECT id, name FROM ancestors WHERE depth > 0 ORDER BY depth DESC",
+            )
+            .map_err(DatabaseError::storage)?;
+        let ancestors = statement
+            .query_map([folder_id], |row| {
+                Ok(Folder {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            })
+            .map_err(DatabaseError::storage)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(DatabaseError::storage)?;
+        Ok(LearningItemDetail {
+            id,
+            title,
+            folder: LearningItemFolder {
+                id: folder_id,
+                name: folder_name,
+                ancestors,
+            },
+            review_date,
+        })
     }
 
     fn folder_contents(&self, folder_id: i64) -> Result<Vec<FolderContent>, LibraryError> {
@@ -600,6 +734,10 @@ mod tests {
             Err(crate::learning_items::LearningItemsError::BlankTitle)
         ));
         assert!(matches!(
+            database.create_learning_item(&"a".repeat(121), algorithms.id),
+            Err(crate::learning_items::LearningItemsError::TitleTooLong)
+        ));
+        assert!(matches!(
             database.create_learning_item("Binary Search", 999),
             Err(crate::learning_items::LearningItemsError::InvalidFolder)
         ));
@@ -630,6 +768,158 @@ mod tests {
         assert!(database
             .create_learning_item("Binary Search", data_structures.id)
             .is_ok());
+    }
+
+    #[test]
+    fn reads_nested_learning_item_detail_and_renames_only_the_title() {
+        let database = Database::open_in_memory().unwrap();
+        let algorithms = database.create_folder("Algorithms", None).unwrap();
+        let trees = database
+            .create_folder("Trees", Some(algorithms.id))
+            .unwrap();
+        let item = database
+            .create_learning_item_with_clock(
+                "Binary Search",
+                trees.id,
+                &FixedClock(NaiveDate::from_ymd_opt(2026, 9, 5).unwrap()),
+            )
+            .unwrap();
+
+        assert_eq!(
+            database.learning_item_detail(item.id).unwrap(),
+            crate::learning_items::LearningItemDetail {
+                id: item.id,
+                title: "Binary Search".to_owned(),
+                folder: crate::learning_items::LearningItemFolder {
+                    id: trees.id,
+                    name: "Trees".to_owned(),
+                    ancestors: vec![algorithms.clone()],
+                },
+                review_date: "2026-09-06".to_owned(),
+            }
+        );
+
+        let detail = database
+            .update_learning_item_title(item.id, "  Binary Search Trees  ")
+            .unwrap();
+        assert_eq!(detail.title, "Binary Search Trees");
+        assert_eq!(detail.folder.id, trees.id);
+        assert_eq!(detail.review_date, "2026-09-06");
+        assert_eq!(
+            database
+                .connection
+                .query_row(
+                    "SELECT folder_id FROM learning_items WHERE id = ?1",
+                    [item.id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            trees.id
+        );
+        assert_eq!(
+            database
+                .connection
+                .query_row(
+                    "SELECT review_date FROM pending_schedules WHERE learning_item_id = ?1",
+                    [item.id],
+                    |row| row.get::<_, String>(0),
+                )
+                .unwrap(),
+            "2026-09-06"
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_duplicate_and_missing_title_updates_without_changes() {
+        let database = Database::open_in_memory().unwrap();
+        let algorithms = database.create_folder("Algorithms", None).unwrap();
+        let binary_search = database
+            .create_learning_item("Binary Search", algorithms.id)
+            .unwrap();
+        database
+            .create_learning_item("Binary Trees", algorithms.id)
+            .unwrap();
+
+        assert!(matches!(
+            database.update_learning_item_title(binary_search.id, " \n "),
+            Err(crate::learning_items::LearningItemsError::BlankTitle)
+        ));
+        assert!(matches!(
+            database.update_learning_item_title(binary_search.id, "binary trees"),
+            Err(crate::learning_items::LearningItemsError::DuplicateTitle)
+        ));
+        assert!(matches!(
+            database.update_learning_item_title(binary_search.id, &"a".repeat(121)),
+            Err(crate::learning_items::LearningItemsError::TitleTooLong)
+        ));
+        assert!(matches!(
+            database.update_learning_item_title(999, "Anything"),
+            Err(crate::learning_items::LearningItemsError::LearningItemNotFound)
+        ));
+        assert_eq!(
+            database
+                .learning_item_detail(binary_search.id)
+                .unwrap()
+                .title,
+            "Binary Search"
+        );
+        assert!(database
+            .update_learning_item_title(binary_search.id, "BINARY SEARCH")
+            .is_ok());
+    }
+
+    #[test]
+    fn rolls_back_a_title_update_when_sqlite_rejects_it() {
+        let database = Database::open_in_memory().unwrap();
+        let folder = database.create_folder("Algorithms", None).unwrap();
+        let item = database
+            .create_learning_item("Binary Search", folder.id)
+            .unwrap();
+        database
+            .connection
+            .execute_batch(
+                "CREATE TRIGGER reject_title_update
+                 BEFORE UPDATE OF title ON learning_items
+                 BEGIN SELECT RAISE(ABORT, 'title update rejected'); END;",
+            )
+            .unwrap();
+
+        assert!(database
+            .update_learning_item_title(item.id, "Binary Search Trees")
+            .is_err());
+        assert_eq!(
+            database.learning_item_detail(item.id).unwrap().title,
+            "Binary Search"
+        );
+    }
+
+    #[test]
+    fn persists_a_renamed_learning_item_after_reopening() {
+        let path = std::env::temp_dir().join(format!(
+            "taffy-learning-item-rename-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let database = Database::open(&path).unwrap();
+        let folder = database.create_folder("Algorithms", None).unwrap();
+        let item = database
+            .create_learning_item("Binary Search", folder.id)
+            .unwrap();
+        database
+            .update_learning_item_title(item.id, "Binary Search Trees")
+            .unwrap();
+        drop(database);
+
+        let reopened = Database::open(&path).unwrap();
+        assert_eq!(
+            reopened.learning_item_detail(item.id).unwrap().title,
+            "Binary Search Trees"
+        );
+        drop(reopened);
+        std::fs::remove_file(path).unwrap();
     }
 
     #[test]
