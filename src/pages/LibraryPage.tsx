@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ArrowUp, ChevronRight, FilePlus2, FolderPlus, LibraryBig, Settings } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { CreateLearningItemPage } from "../features/learning-items/components/CreateLearningItemPage";
+import { LearningItemDetailPage } from "../features/learning-items/components/LearningItemDetailPage";
 import type { Folder, FolderView, LibraryContent } from "../features/library/commands/types";
 import { FolderList } from "../features/library/components/RootFolderList";
+import type { LearningItemCue } from "../features/library/components/LearningItemMotion";
 import {
   useFolderViewQuery,
   useRootFoldersQuery,
 } from "../features/library/queries/useRootFoldersQuery";
 
-type LibraryPageMode = "contents" | "create-learning-item";
+type LibraryPageMode = "contents" | "create-learning-item" | "learning-item-detail";
 
 export function LibraryPage() {
   const [folderId, setFolderId] = useState<number | null>(null);
@@ -19,7 +21,16 @@ export function LibraryPage() {
   > | null>(null);
   const [pageMode, setPageMode] = useState<LibraryPageMode>("contents");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [highlightedLearningItemId, setHighlightedLearningItemId] = useState<number | null>(null);
+  const createFolderTriggerRef = useRef<HTMLButtonElement>(null);
+  const [learningItemCue, setLearningItemCue] = useState<{
+    id: number;
+    type: LearningItemCue;
+  } | null>(null);
+  const [detailOrigin, setDetailOrigin] = useState<{
+    folder: Folder;
+    ancestors: Folder[];
+    learningItemId: number;
+  } | null>(null);
   const rootFoldersQuery = useRootFoldersQuery();
   const folderViewQuery = useFolderViewQuery(folderId);
   const isRoot = folderId === null;
@@ -35,29 +46,46 @@ export function LibraryPage() {
   function openRoot() {
     setPageMode("contents");
     setIsCreatingFolder(false);
-    setHighlightedLearningItemId(null);
+    setLearningItemCue(null);
     setPendingFolderContext(null);
     setFolderId(null);
+    setDetailOrigin(null);
   }
 
   function openFolder(folder: Folder) {
     setPageMode("contents");
     setIsCreatingFolder(false);
-    setHighlightedLearningItemId(null);
+    setLearningItemCue(null);
     setPendingFolderContext({
       folder,
       ancestors: view ? [...view.ancestors, view.folder] : [],
     });
     setFolderId(folder.id);
+    setDetailOrigin(null);
   }
 
   function openKnownFolder(folder: Folder, ancestors: Folder[]) {
     setPageMode("contents");
     setIsCreatingFolder(false);
-    setHighlightedLearningItemId(null);
+    setLearningItemCue(null);
     setPendingFolderContext({ folder, ancestors });
     setFolderId(folder.id);
+    setDetailOrigin(null);
   }
+
+  function returnToDetailOrigin() {
+    if (!detailOrigin) return;
+    setPageMode("contents");
+    setIsCreatingFolder(false);
+    setLearningItemCue({ id: detailOrigin.learningItemId, type: "return" });
+    setPendingFolderContext({ folder: detailOrigin.folder, ancestors: detailOrigin.ancestors });
+    setFolderId(detailOrigin.folder.id);
+    setDetailOrigin(null);
+  }
+
+  const clearLearningItemCue = useCallback((learningItemId: number) => {
+    setLearningItemCue((current) => (current?.id === learningItemId ? null : current));
+  }, []);
 
   return (
     <main className="app-shell">
@@ -81,9 +109,14 @@ export function LibraryPage() {
             folder={view.folder}
             onCancel={() => setPageMode("contents")}
             onCreated={(learningItem) => {
-              setHighlightedLearningItemId(learningItem.id);
               setPageMode("contents");
+              setLearningItemCue({ id: learningItem.id, type: "insertion" });
             }}
+          />
+        ) : pageMode === "learning-item-detail" && detailOrigin ? (
+          <LearningItemDetailPage
+            learningItemId={detailOrigin.learningItemId}
+            onReturnToFolder={returnToDetailOrigin}
           />
         ) : (
           <>
@@ -147,6 +180,7 @@ export function LibraryPage() {
                     </Button>
                     <Button
                       className="folder-create-button"
+                      ref={createFolderTriggerRef}
                       variant="secondary"
                       disabled={isOpeningFolder}
                       onClick={() => setIsCreatingFolder(true)}
@@ -158,7 +192,7 @@ export function LibraryPage() {
                 </div>
               ) : (
                 <div className="library-commands library-root-commands">
-                  <Button onClick={() => setIsCreatingFolder(true)}>
+                  <Button ref={createFolderTriggerRef} onClick={() => setIsCreatingFolder(true)}>
                     <FolderPlus size={17} aria-hidden="true" />
                     Create Folder
                   </Button>
@@ -174,11 +208,22 @@ export function LibraryPage() {
             {contents && (
               <FolderList
                 contents={contents}
-                highlightedLearningItemId={highlightedLearningItemId}
+                learningItemCue={learningItemCue}
+                onLearningItemCuePresented={clearLearningItemCue}
                 parentId={folderId}
                 onOpen={openFolder}
+                onOpenLearningItem={(learningItem) => {
+                  if (!view) return;
+                  setDetailOrigin({
+                    folder: view.folder,
+                    ancestors: view.ancestors,
+                    learningItemId: learningItem.id,
+                  });
+                  setPageMode("learning-item-detail");
+                }}
                 isCreatingFolder={isCreatingFolder}
                 onCreatingFolderChange={setIsCreatingFolder}
+                focusReturnRef={createFolderTriggerRef}
                 hideCreateFolderAction
               />
             )}

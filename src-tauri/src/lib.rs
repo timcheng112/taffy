@@ -28,7 +28,9 @@ pub fn run() {
             commands::get_root_folders,
             commands::get_folder_view,
             commands::create_folder,
-            commands::create_learning_item
+            commands::create_learning_item,
+            commands::get_learning_item_detail,
+            commands::update_learning_item_title
         ])
         .run(tauri::generate_context!())
         .expect("error while running taffy");

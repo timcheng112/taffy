@@ -62,6 +62,18 @@ it("keeps an invalid title active with inline validation", async () => {
   expect(input).toHaveFocus();
 });
 
+it("keeps an over-limit title active with inline validation", async () => {
+  const user = userEvent.setup();
+  renderCreatePage();
+  const input = screen.getByLabelText("Title");
+  await user.type(input, "a".repeat(121));
+  expect(
+    await screen.findByText("Keep Learning Item titles to 120 characters or fewer."),
+  ).toBeVisible();
+  expect(input).toHaveValue("a".repeat(121));
+  expect(input).toHaveFocus();
+});
+
 it("preserves the title after a backend validation failure", async () => {
   const user = userEvent.setup();
   renderCreatePage({

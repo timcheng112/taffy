@@ -2,17 +2,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { FilePlus2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import type { Folder } from "../../library/commands/types";
 import { useCreateLearningItemMutation } from "../mutations/useCreateLearningItemMutation";
 import { learningItemsCommandError, type LearningItem } from "../commands/types";
-
-const learningItemSchema = z.object({
-  title: z.string().trim().min(1, "Enter a Learning Item title."),
-});
-type LearningItemFormValues = z.infer<typeof learningItemSchema>;
+import { learningItemTitleSchema, type LearningItemTitleValues } from "../titleValidation";
 
 export function CreateLearningItemPage({
   folder,
@@ -25,9 +20,10 @@ export function CreateLearningItemPage({
   onCancel: () => void;
   onCreated: (learningItem: LearningItem) => void;
 }) {
-  const form = useForm<LearningItemFormValues>({
-    resolver: zodResolver(learningItemSchema),
+  const form = useForm<LearningItemTitleValues>({
+    resolver: zodResolver(learningItemTitleSchema),
     defaultValues: { title: "" },
+    mode: "onChange",
   });
   const createLearningItem = useCreateLearningItemMutation(folder.id);
   const [formError, setFormError] = useState<string | null>(null);

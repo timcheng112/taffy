@@ -129,7 +129,7 @@ a:focus-visible {
 }
 .app-shell {
   display: grid;
-  grid-template-columns: 15rem 1fr;
+  grid-template-columns: 15rem minmax(0, 1fr);
   min-height: 100vh;
 }
 .app-shell aside {
@@ -158,6 +158,8 @@ a:focus-visible {
   margin-top: auto;
 }
 .library-workspace {
+  min-width: 0;
+  overflow-x: hidden;
   padding: clamp(2rem, 6vw, 5rem);
 }
 .library-workspace header {
@@ -239,14 +241,56 @@ a:focus-visible {
   box-shadow: inset 0 0 0 3px #c4a7e788;
 }
 .learning-item-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
   color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.learning-item-highlight {
-  animation: learning-item-highlight 2s ease-out;
+.learning-item-row:hover {
+  background: #9893a522;
+}
+.learning-item-row:focus-visible {
+  position: relative;
+  outline: 0;
+  box-shadow: inset 0 0 0 3px #c4a7e788;
+}
+.learning-item-insertion {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  animation: learning-item-insertion-expand var(--learning-item-insertion-duration)
+    var(--learning-item-insertion-easing) forwards;
+}
+.learning-item-insertion-content {
+  min-height: 0;
+}
+.learning-item-inserting {
+  opacity: 0;
+  animation:
+    learning-item-insertion-reveal var(--learning-item-insertion-reveal-duration) ease-out
+      var(--learning-item-insertion-reveal-delay) forwards,
+    learning-item-highlight var(--learning-item-highlight-duration) ease-out
+      var(--learning-item-insertion-duration) forwards;
+}
+.learning-item-returning {
+  animation: learning-item-highlight var(--learning-item-highlight-duration) ease-out forwards;
+}
+@keyframes learning-item-insertion-expand {
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+@keyframes learning-item-insertion-reveal {
+  to {
+    opacity: 1;
+  }
 }
 @keyframes learning-item-highlight {
-  0% {
-    background: #c4a7e777;
+  0%,
+  30% {
+    background: #c4a7e755;
   }
   100% {
     background: transparent;
@@ -260,6 +304,9 @@ a:focus-visible {
   color: #797593;
 }
 .library-list {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   margin-top: 1.5rem;
   border: 1px solid #9893a544;
@@ -281,8 +328,22 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  min-width: 0;
+  max-width: 100%;
   min-height: 3.25rem;
   padding: 0.7rem 0.9rem;
+  overflow: hidden;
+}
+.learning-item-row-icon {
+  flex: 0 0 auto;
+}
+.learning-item-row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .library-row + .library-row {
   border-top: 1px solid #9893a533;
@@ -325,10 +386,45 @@ a:focus-visible {
 .create-folder-field .compact-folder-input {
   padding: 0.55rem 0.65rem;
 }
-.learning-item-create {
-  width: min(100%, 48rem);
-  margin: 0 auto;
-  padding: clamp(1rem, 3vw, 2rem) 0;
+.learning-item-create,
+.learning-item-detail,
+.learning-item-detail-state {
+  width: 100%;
+  padding: 0;
+}
+.learning-item-create h1,
+.learning-item-detail h1 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(1.8rem, 4vw, 2.45rem);
+  line-height: 1.1;
+}
+.learning-item-create .eyebrow,
+.learning-item-detail .eyebrow {
+  margin: 0 0 0.5rem;
+}
+.learning-item-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.learning-item-metadata {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0 0;
+}
+.learning-item-metadata div {
+  display: grid;
+  gap: 0.2rem;
+}
+.learning-item-metadata dt {
+  color: #797593;
+  font-size: 0.85rem;
+}
+.learning-item-metadata dd {
+  margin: 0;
 }
 .learning-item-create h1 {
   margin: 0;
@@ -339,7 +435,7 @@ a:focus-visible {
 .learning-item-path {
   display: grid;
   gap: 0.25rem;
-  margin: 1.5rem 0 0;
+  margin: 1rem 0 0;
   color: #797593;
   line-height: 1.45;
 }
@@ -352,7 +448,7 @@ a:focus-visible {
 .learning-item-form {
   display: grid;
   gap: 0.55rem;
-  margin-top: 2.5rem;
+  margin-top: 1.5rem;
 }
 .learning-item-form > label {
   font-weight: 600;
@@ -390,6 +486,15 @@ a:focus-visible {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+  .learning-item-inserting,
+  .learning-item-returning {
+    animation: none !important;
+    background: #c4a7e777;
+  }
+  .learning-item-returning:hover,
+  .learning-item-inserting:hover {
+    background: #c4a7e799;
+  }
 }
 @media (max-width: 640px) {
   .app-shell {
@@ -407,5 +512,14 @@ a:focus-visible {
   .app-shell .wordmark::after {
     content: "t";
     font-size: 1.25rem;
+  }
+  .library-workspace {
+    padding: 2rem 1.25rem;
+  }
+  .learning-item-form-actions {
+    flex-wrap: wrap;
+  }
+  .learning-item-form-actions .button {
+    flex: 1 1 10rem;
   }
 }
