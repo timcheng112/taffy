@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+
+if [ -f "$repo_root/scripts/pre-push" ]; then
+  exec sh "$repo_root/scripts/pre-push"
+fi
+
+cd "$repo_root"
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
+cargo test --manifest-path src-tauri/Cargo.toml

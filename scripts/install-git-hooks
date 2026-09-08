@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+common_dir=$(git rev-parse --git-common-dir)
+
+case "$common_dir" in
+  /*) ;;
+  *) common_dir="$repo_root/$common_dir" ;;
+esac
+
+git config --unset-all core.hooksPath || true
+mkdir -p "$common_dir/hooks"
+install -m 755 "$repo_root/.githooks/pre-push" "$common_dir/hooks/pre-push"
