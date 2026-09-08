@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LearningItemsCommandClientProvider } from "../features/learning-items/commands/LearningItemsCommandClientProvider";
-import { fakeLearningItemsCommandClient } from "../features/learning-items/commands/fakeLearningItemsCommandClient";
-import { LibraryCommandClientProvider } from "../features/library/commands/LibraryCommandClientProvider";
-import type { LibraryCommandClient } from "../features/library/commands/types";
-import { LibraryPage } from "./LibraryPage";
+import { LearningItemsCommandClientProvider } from "../../learning-items/commands/LearningItemsCommandClientProvider";
+import { fakeLearningItemsCommandClient } from "../../learning-items/commands/fakeLearningItemsCommandClient";
+import { LibraryCommandClientProvider } from "../commands/LibraryCommandClientProvider";
+import type { LibraryCommandClient } from "../commands/types";
+import { LibraryComposer } from "./LibraryComposer";
 
 it("creates from a Folder only, then inserts the backend-ordered row with the shared motion", async () => {
   const user = userEvent.setup();
@@ -39,7 +39,7 @@ it("creates from a Folder only, then inserts the backend-ordered row with the sh
     >
       <LibraryCommandClientProvider client={libraryClient}>
         <LearningItemsCommandClientProvider client={learningItemsClient}>
-          <LibraryPage />
+          <LibraryComposer />
         </LearningItemsCommandClientProvider>
       </LibraryCommandClientProvider>
     </QueryClientProvider>,
@@ -96,7 +96,7 @@ it("shows the clicked Folder context while its contents are loading", async () =
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <LibraryCommandClientProvider client={libraryClient}>
-        <LibraryPage />
+        <LibraryComposer />
       </LibraryCommandClientProvider>
     </QueryClientProvider>,
   );
@@ -145,7 +145,6 @@ it("opens a Learning Item row, renames it, then returns to its highlighted origi
       title,
       folder: { id: 1, name: "Algorithms", ancestors: [] },
       reviewDate: "2026-09-08",
-      hasReviewHistory: false as const,
     }),
     updateLearningItemTitle: async ({
       title: nextTitle,
@@ -159,7 +158,6 @@ it("opens a Learning Item row, renames it, then returns to its highlighted origi
         title,
         folder: { id: 1, name: "Algorithms", ancestors: [] },
         reviewDate: "2026-09-08",
-        hasReviewHistory: false as const,
       };
     },
   };
@@ -169,7 +167,7 @@ it("opens a Learning Item row, renames it, then returns to its highlighted origi
     >
       <LibraryCommandClientProvider client={libraryClient}>
         <LearningItemsCommandClientProvider client={learningItemsClient}>
-          <LibraryPage />
+          <LibraryComposer />
         </LearningItemsCommandClientProvider>
       </LibraryCommandClientProvider>
     </QueryClientProvider>,

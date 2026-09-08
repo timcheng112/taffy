@@ -8,7 +8,6 @@ it("uses the native title-length error contract for updates", async () => {
       title: "Binary Search",
       folder: { id: 2, name: "Searching", ancestors: [] },
       reviewDate: "2026-09-08",
-      hasReviewHistory: false,
     },
   ]);
 

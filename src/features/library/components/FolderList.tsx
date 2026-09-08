@@ -1,27 +1,16 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { FileText, FolderPlus, Folder as FolderIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { FolderPlus } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import { useCreateFolderMutation } from "../mutations/useCreateRootFolderMutation";
 import type { LibraryContent } from "../commands/types";
+import { useCreateFolderMutation } from "../mutations/useCreateRootFolderMutation";
+import {
+  InlineFolderCreationForm,
+  type FolderFormValues,
+  useFolderCreationForm,
+} from "./InlineFolderCreationForm";
+import { FolderRow, LearningItemRow } from "./FolderListRow";
 import { LibraryEmptyState } from "./LibraryEmptyState";
-import { LearningItemMotion, type LearningItemCue } from "./LearningItemMotion";
-
-const folderSchema = z.object({
-  name: z.string().trim().min(1, "Enter a Folder name."),
-});
-type FolderFormValues = z.infer<typeof folderSchema>;
+import type { LearningItemCue } from "./LearningItemMotion";
 
 type LearningItem = Extract<LibraryContent, { type: "learningItem" }>["value"];
 
@@ -56,7 +45,7 @@ export function FolderList({
   contents: LibraryContent[];
   parentId: number | null;
   onOpen: (folder: { id: number; name: string }) => void;
-  onOpenLearningItem: (learningItem: { id: number; folderId: number; title: string }) => void;
+  onOpenLearningItem: (learningItem: LearningItem) => void;
   learningItemCue?: { id: number; type: LearningItemCue } | null;
   onLearningItemCuePresented?: (learningItemId: number) => void;
   isCreatingFolder?: boolean;
@@ -70,11 +59,8 @@ export function FolderList({
   const shouldRestoreFocusRef = useRef(false);
   const isCreating = controlledIsCreatingFolder ?? uncontrolledIsCreating;
   const [failure, setFailure] = useState<string | null>(null);
-  const form = useForm<FolderFormValues>({
-    resolver: zodResolver(folderSchema),
-    defaultValues: { name: "" },
-  });
-  const { formState, handleSubmit, register, reset } = form;
+  const form = useFolderCreationForm();
+  const { reset } = form;
   const createFolder = useCreateFolderMutation(parentId);
   const setIsCreating = useCallback(
     (next: boolean) => {
@@ -126,56 +112,21 @@ export function FolderList({
   return (
     <div className="library-list" aria-label="Library Folders">
       {isCreating && (
-        <form
-          className="library-row create-folder-row"
-          onSubmit={handleSubmit(submitFolder)}
-          noValidate
-        >
-          <FolderIcon size={18} aria-hidden="true" />
-          <div className="create-folder-field">
-            <label className="sr-only" htmlFor="folder-name">
-              Folder name
-            </label>
-            <Input
-              className="compact-folder-input"
-              id="folder-name"
-              autoFocus
-              aria-invalid={Boolean(formState.errors.name)}
-              aria-describedby="folder-name-error"
-              {...register("name")}
-            />
-            <p className="field-error" id="folder-name-error" role="alert">
-              {formState.errors.name?.message}
-            </p>
-            {failure && (
-              <p className="field-error" role="alert">
-                {failure}
-              </p>
-            )}
-          </div>
-        </form>
+        <InlineFolderCreationForm form={form} failure={failure} onSubmit={submitFolder} />
       )}
-      {contents.map((content) => (
-        <Fragment key={`${content.type}-${content.value.id}`}>
-          {content.type === "folder" ? (
-            <button
-              className="library-row folder-row"
-              type="button"
-              onClick={() => onOpen(content.value)}
-            >
-              <FolderIcon size={18} aria-hidden="true" />
-              <span>{content.value.name}</span>
-            </button>
-          ) : (
-            <LearningItemRow
-              item={content.value}
-              onOpen={onOpenLearningItem}
-              cue={content.value.id === learningItemCue?.id ? learningItemCue.type : undefined}
-              onCuePresented={() => onLearningItemCuePresented?.(content.value.id)}
-            />
-          )}
-        </Fragment>
-      ))}
+      {contents.map((content) =>
+        content.type === "folder" ? (
+          <FolderRow key={`folder-${content.value.id}`} folder={content.value} onOpen={onOpen} />
+        ) : (
+          <LearningItemRow
+            key={`learningItem-${content.value.id}`}
+            item={content.value}
+            onOpen={onOpenLearningItem}
+            cue={content.value.id === learningItemCue?.id ? learningItemCue.type : undefined}
+            onCuePresented={() => onLearningItemCuePresented?.(content.value.id)}
+          />
+        ),
+      )}
       {contents.length === 0 && !isCreating && (
         <LibraryEmptyState
           title={parentId === null ? "No folders yet." : "No Learning Items or Folders yet."}
@@ -186,55 +137,35 @@ export function FolderList({
           }
           action={
             !hideCreateFolderAction && (
-              <Button
-                className="create-folder-button"
-                type="button"
-                ref={localCreateFolderTriggerRef}
-                onClick={() => setIsCreating(true)}
-              >
-                <FolderPlus size={17} aria-hidden="true" />
-                Create Folder
-              </Button>
+              <FolderCreateAction
+                triggerRef={localCreateFolderTriggerRef}
+                onCreate={() => setIsCreating(true)}
+              />
             )
           }
         />
       )}
       {!hideCreateFolderAction && !isCreating && contents.length > 0 && (
-        <Button
-          className="create-folder-button"
-          ref={localCreateFolderTriggerRef}
-          onClick={() => setIsCreating(true)}
-        >
-          <FolderPlus size={17} aria-hidden="true" />
-          Create Folder
-        </Button>
+        <FolderCreateAction
+          triggerRef={localCreateFolderTriggerRef}
+          onCreate={() => setIsCreating(true)}
+        />
       )}
     </div>
   );
 }
 
-function LearningItemRow({
-  item,
-  onOpen,
-  cue,
-  onCuePresented,
+function FolderCreateAction({
+  triggerRef,
+  onCreate,
 }: {
-  item: LearningItem;
-  onOpen: (learningItem: LearningItem) => void;
-  cue?: LearningItemCue;
-  onCuePresented?: () => void;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  onCreate: () => void;
 }) {
   return (
-    <LearningItemMotion cue={cue} onPresented={onCuePresented}>
-      <button
-        className="library-row learning-item-row"
-        type="button"
-        onClick={() => onOpen(item)}
-        title={item.title}
-      >
-        <FileText className="learning-item-row-icon" size={18} aria-hidden="true" />
-        <span className="learning-item-row-title">{item.title}</span>
-      </button>
-    </LearningItemMotion>
+    <Button className="create-folder-button" type="button" ref={triggerRef} onClick={onCreate}>
+      <FolderPlus size={17} aria-hidden="true" />
+      Create Folder
+    </Button>
   );
 }

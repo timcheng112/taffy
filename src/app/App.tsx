@@ -1,6 +1,7 @@
 import { OnboardingPage } from "../features/onboarding/components/OnboardingPage";
 import { useLearnerQuery } from "../features/onboarding/queries/useLearnerQuery";
-import { LibraryPage } from "../pages/LibraryPage";
+import { LibraryComposer } from "../features/library/components/LibraryComposer";
+import { AppShell } from "./AppShell";
 
 export function App() {
   const learnerQuery = useLearnerQuery();
@@ -12,5 +13,9 @@ export function App() {
       </main>
     );
   if (learnerQuery.data === null) return <OnboardingPage />;
-  return <LibraryPage />;
+  return (
+    <AppShell>
+      <LibraryComposer />
+    </AppShell>
+  );
 }

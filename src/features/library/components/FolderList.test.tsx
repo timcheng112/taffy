@@ -6,8 +6,8 @@ import { useRef, useState } from "react";
 import { LibraryCommandClientProvider } from "../commands/LibraryCommandClientProvider";
 import { fakeLibraryCommandClient } from "../commands/fakeLibraryCommandClient";
 import { useFolderViewQuery, useRootFoldersQuery } from "../queries/useRootFoldersQuery";
-import { FolderList } from "./RootFolderList";
-import { LibraryPage } from "../../../pages/LibraryPage";
+import { FolderList } from "./FolderList";
+import { LibraryComposer } from "./LibraryComposer";
 
 function FolderListHarness({ parentId = null }: { parentId?: number | null }) {
   const rootFoldersQuery = useRootFoldersQuery();
@@ -237,7 +237,7 @@ it("navigates nested Folders with breadcrumbs and Up", async () => {
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <LibraryCommandClientProvider client={client}>
-        <LibraryPage />
+        <LibraryComposer />
       </LibraryCommandClientProvider>
     </QueryClientProvider>,
   );

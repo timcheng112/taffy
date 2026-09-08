@@ -14,7 +14,6 @@ it("uses the ratified detail and update command shapes", async () => {
     title: "Binary Search",
     folder: { id: 2, name: "Searching", ancestors: [] },
     reviewDate: "2026-09-08",
-    hasReviewHistory: false as const,
   };
   invoke.mockResolvedValue(detail);
 

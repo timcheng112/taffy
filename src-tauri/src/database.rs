@@ -419,7 +419,6 @@ impl Database {
                 ancestors,
             },
             review_date,
-            has_review_history: false,
         })
     }
 
@@ -797,7 +796,6 @@ mod tests {
                     ancestors: vec![algorithms.clone()],
                 },
                 review_date: "2026-09-06".to_owned(),
-                has_review_history: false,
             }
         );
 

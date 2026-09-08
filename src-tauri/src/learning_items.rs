@@ -21,7 +21,6 @@ pub struct LearningItemDetail {
     pub title: String,
     pub folder: LearningItemFolder,
     pub review_date: String,
-    pub has_review_history: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

@@ -6,7 +6,7 @@ import { LearningItemsCommandClientProvider } from "../commands/LearningItemsCom
 import { fakeLearningItemsCommandClient } from "../commands/fakeLearningItemsCommandClient";
 import type { LearningItemDetail, LearningItemsCommandClient } from "../commands/types";
 import { learningItemsQueryKeys } from "../queries/queryKeys";
-import { LearningItemDetailPage } from "./LearningItemDetailPage";
+import { LearningItemDetailComposer } from "./LearningItemDetailComposer";
 
 const detail: LearningItemDetail = {
   id: 4,
@@ -17,7 +17,6 @@ const detail: LearningItemDetail = {
     ancestors: [{ id: 1, name: "Algorithms" }],
   },
   reviewDate: "2026-09-08",
-  hasReviewHistory: false,
 };
 
 function renderDetail(options: { onReturnToFolder?: () => void } = {}) {
@@ -27,7 +26,7 @@ function renderDetail(options: { onReturnToFolder?: () => void } = {}) {
       <LearningItemsCommandClientProvider
         client={fakeLearningItemsCommandClient(undefined, [detail])}
       >
-        <LearningItemDetailPage
+        <LearningItemDetailComposer
           learningItemId={4}
           onReturnToFolder={options.onReturnToFolder ?? (() => {})}
         />
@@ -87,7 +86,7 @@ it("keeps the focused title draft for local and sibling-duplicate failures", asy
       <LearningItemsCommandClientProvider
         client={fakeLearningItemsCommandClient(undefined, [detail, duplicate])}
       >
-        <LearningItemDetailPage learningItemId={4} onReturnToFolder={() => {}} />
+        <LearningItemDetailComposer learningItemId={4} onReturnToFolder={() => {}} />
       </LearningItemsCommandClientProvider>
     </QueryClientProvider>,
   );
@@ -138,7 +137,7 @@ it("keeps the edit visible and disables its actions while a save is pending", as
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <LearningItemsCommandClientProvider client={client}>
-        <LearningItemDetailPage learningItemId={4} onReturnToFolder={() => {}} />
+        <LearningItemDetailComposer learningItemId={4} onReturnToFolder={() => {}} />
       </LearningItemsCommandClientProvider>
     </QueryClientProvider>,
   );
@@ -166,7 +165,7 @@ it("retains the missing-item draft and gives it an actionable Folder recovery", 
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <LearningItemsCommandClientProvider client={client}>
-        <LearningItemDetailPage learningItemId={4} onReturnToFolder={onReturnToFolder} />
+        <LearningItemDetailComposer learningItemId={4} onReturnToFolder={onReturnToFolder} />
       </LearningItemsCommandClientProvider>
     </QueryClientProvider>,
   );

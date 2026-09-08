@@ -7,7 +7,6 @@ export type LearningItemDetail = {
   title: string;
   folder: { id: number; name: string; ancestors: Folder[] };
   reviewDate: string;
-  hasReviewHistory: false;
 };
 
 export type LearningItemsCommandError = {
