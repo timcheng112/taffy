@@ -67,30 +67,37 @@ export function FolderList({
 }) {
   const [uncontrolledIsCreating, setUncontrolledIsCreating] = useState(false);
   const localCreateFolderTriggerRef = useRef<HTMLButtonElement>(null);
-  const [shouldRestoreFocus, setShouldRestoreFocus] = useState(false);
+  const shouldRestoreFocusRef = useRef(false);
   const isCreating = controlledIsCreatingFolder ?? uncontrolledIsCreating;
   const [failure, setFailure] = useState<string | null>(null);
   const form = useForm<FolderFormValues>({
     resolver: zodResolver(folderSchema),
     defaultValues: { name: "" },
   });
+  const { formState, handleSubmit, register, reset } = form;
   const createFolder = useCreateFolderMutation(parentId);
-  function setIsCreating(next: boolean) {
-    if (onCreatingFolderChange) onCreatingFolderChange(next);
-    else setUncontrolledIsCreating(next);
-  }
-  const cancel = useCallback(() => {
-    form.reset();
+  const setIsCreating = useCallback(
+    (next: boolean) => {
+      if (onCreatingFolderChange) onCreatingFolderChange(next);
+      else setUncontrolledIsCreating(next);
+    },
+    [onCreatingFolderChange],
+  );
+  const close = useCallback(() => {
+    reset();
     setFailure(null);
     setIsCreating(false);
-    setShouldRestoreFocus(true);
-  }, [form]);
+  }, [reset, setIsCreating]);
+  const cancel = useCallback(() => {
+    close();
+    shouldRestoreFocusRef.current = true;
+  }, [close]);
 
   useLayoutEffect(() => {
-    if (!shouldRestoreFocus || isCreating) return;
+    if (!shouldRestoreFocusRef.current || isCreating) return;
     (focusReturnRef?.current ?? localCreateFolderTriggerRef.current)?.focus();
-    setShouldRestoreFocus(false);
-  }, [focusReturnRef, isCreating, shouldRestoreFocus]);
+    shouldRestoreFocusRef.current = false;
+  }, [focusReturnRef, isCreating]);
 
   useEffect(() => {
     if (!isCreating) return;
@@ -105,18 +112,23 @@ export function FolderList({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [cancel, isCreating]);
 
+  const submitFolder = useCallback(
+    (values: FolderFormValues) => {
+      setFailure(null);
+      createFolder.mutate(values, {
+        onSuccess: close,
+        onError: (error) => setFailure(creationFailure(error)),
+      });
+    },
+    [close, createFolder],
+  );
+
   return (
     <div className="library-list" aria-label="Library Folders">
       {isCreating && (
         <form
           className="library-row create-folder-row"
-          onSubmit={form.handleSubmit((values) => {
-            setFailure(null);
-            createFolder.mutate(values, {
-              onSuccess: () => cancel(),
-              onError: (error) => setFailure(creationFailure(error)),
-            });
-          })}
+          onSubmit={handleSubmit(submitFolder)}
           noValidate
         >
           <FolderIcon size={18} aria-hidden="true" />
@@ -128,12 +140,12 @@ export function FolderList({
               className="compact-folder-input"
               id="folder-name"
               autoFocus
-              aria-invalid={Boolean(form.formState.errors.name)}
+              aria-invalid={Boolean(formState.errors.name)}
               aria-describedby="folder-name-error"
-              {...form.register("name")}
+              {...register("name")}
             />
             <p className="field-error" id="folder-name-error" role="alert">
-              {form.formState.errors.name?.message}
+              {formState.errors.name?.message}
             </p>
             {failure && (
               <p className="field-error" role="alert">
