@@ -18,6 +18,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overscroll-behavior: none;
+}
+html {
+  overscroll-behavior: none;
 }
 button,
 input {
@@ -135,6 +139,10 @@ a:focus-visible {
 .app-shell aside {
   display: flex;
   flex-direction: column;
+  align-self: start;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   padding: 1.5rem 1rem;
   border-right: 1px solid #9893a533;
   background: color-mix(in srgb, #f2e9de 80%, transparent);
@@ -159,11 +167,138 @@ a:focus-visible {
 }
 .app-workspace {
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   padding: clamp(2rem, 6vw, 5rem);
 }
 .app-workspace header {
   display: block;
+}
+.home-header {
+  max-width: 60rem;
+}
+.home-header .eyebrow {
+  margin-bottom: 0.55rem;
+}
+.review-queue-section {
+  width: min(100%, 60rem);
+  margin-top: 2rem;
+}
+.review-queue-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.review-queue-heading h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.review-queue-count {
+  flex: 0 0 auto;
+  color: #797593;
+  font-size: 0.875rem;
+}
+.review-queue-list {
+  width: 100%;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #9893a544;
+  border-radius: 12px;
+  list-style: none;
+  background: #fffaf3;
+}
+.review-queue-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 3.25rem;
+  padding: 0.7rem 0.9rem;
+}
+.review-queue-row + .review-queue-row {
+  border-top: 1px solid #9893a533;
+}
+.review-queue-row-icon {
+  flex: 0 0 auto;
+}
+.review-queue-row-content {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 0.15rem;
+}
+.review-queue-row-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+  line-height: 1.375;
+}
+.review-queue-row-folder {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.3rem;
+  overflow-wrap: anywhere;
+  color: #797593;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.review-queue-row-folder svg {
+  flex: 0 0 auto;
+}
+.review-queue-row-status {
+  flex: 0 0 6.5rem;
+  color: #367681;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: right;
+}
+.review-queue-loading {
+  display: grid;
+  gap: 1px;
+  padding: 0.75rem;
+  background: #9893a511;
+}
+.review-queue-loading span {
+  display: block;
+  height: 2.75rem;
+  border-radius: 8px;
+  background: #9893a522;
+}
+.review-queue-state {
+  display: flex;
+  min-height: 18rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 2rem;
+  border: 1px solid #9893a544;
+  border-radius: 12px;
+  background: #fffaf3;
+  text-align: center;
+}
+.review-queue-state p {
+  margin: 0;
+}
+.review-queue-empty p + p,
+.review-queue-error p + p {
+  color: #797593;
+}
+.review-queue-error {
+  border-color: #b4637a88;
+}
+.review-queue-error p:first-child {
+  color: #b4637a;
+}
+.review-queue-error .button {
+  margin-top: 0.75rem;
 }
 .library-commands,
 .library-navigation,
@@ -477,6 +612,10 @@ a:focus-visible {
   .app-shell aside {
     background: #2a273f;
   }
+  .review-queue-list,
+  .review-queue-state {
+    background: #2a273f;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -515,6 +654,22 @@ a:focus-visible {
   }
   .app-workspace {
     padding: 2rem 1.25rem;
+  }
+  .review-queue-row {
+    align-items: flex-start;
+  }
+  .review-queue-row-status {
+    flex-basis: auto;
+    padding-top: 0.1rem;
+    text-align: left;
+  }
+  .review-queue-row-title {
+    white-space: normal;
+  }
+  .review-queue-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
   }
   .learning-item-form-actions {
     flex-wrap: wrap;
