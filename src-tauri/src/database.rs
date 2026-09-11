@@ -9,6 +9,9 @@ use crate::learning_items::{
 };
 use crate::library::{Folder, FolderContent, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
+use crate::review_queue::{
+    HomeReviewQueueEntry, ReviewQueueError, ReviewQueueFolder, ReviewQueueFolderAncestor,
+};
 use crate::scheduling::{first_review_date, LocalDateClock, SystemLocalDateClock};
 
 #[derive(Debug, Error)]
@@ -109,6 +112,18 @@ impl Database {
                        review_date TEXT NOT NULL
                      );
                      INSERT INTO schema_migrations (version) VALUES (3);",
+                )
+                .map_err(DatabaseError::storage)?;
+        }
+        if !Self::has_migration(&transaction, 4)? {
+            transaction
+                .execute_batch(
+                    "CREATE TABLE review_queue_entries (
+                       id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       learning_item_id INTEGER NOT NULL UNIQUE
+                         REFERENCES learning_items(id)
+                     );
+                     INSERT INTO schema_migrations (version) VALUES (4);",
                 )
                 .map_err(DatabaseError::storage)?;
         }
@@ -288,6 +303,95 @@ impl Database {
             .map_err(DatabaseError::storage)?;
         transaction.commit().map_err(DatabaseError::storage)?;
         Ok(learning_item)
+    }
+
+    pub fn get_home_review_queue(&self) -> Result<Vec<HomeReviewQueueEntry>, ReviewQueueError> {
+        self.get_home_review_queue_with_clock(&SystemLocalDateClock)
+    }
+
+    pub fn get_home_review_queue_with_clock(
+        &self,
+        clock: &impl LocalDateClock,
+    ) -> Result<Vec<HomeReviewQueueEntry>, ReviewQueueError> {
+        let transaction = self
+            .connection
+            .unchecked_transaction()
+            .map_err(DatabaseError::storage)?;
+        let today = clock.today().to_string();
+        transaction
+            .execute(
+                "INSERT OR IGNORE INTO review_queue_entries (learning_item_id)
+                 SELECT learning_items.id
+                 FROM learning_items
+                 JOIN pending_schedules ON pending_schedules.learning_item_id = learning_items.id
+                 WHERE pending_schedules.review_date <= ?1
+                 ORDER BY learning_items.id",
+                [&today],
+            )
+            .map_err(DatabaseError::storage)?;
+
+        let queued_items = {
+            let mut statement = transaction
+                .prepare(
+                    "SELECT review_queue_entries.learning_item_id, learning_items.title,
+                            folders.id, folders.name
+                     FROM review_queue_entries
+                     JOIN learning_items ON learning_items.id = review_queue_entries.learning_item_id
+                     JOIN folders ON folders.id = learning_items.folder_id
+                     ORDER BY review_queue_entries.id",
+                )
+                .map_err(DatabaseError::storage)?;
+            let rows = statement
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, i64>(2)?,
+                        row.get::<_, String>(3)?,
+                    ))
+                })
+                .map_err(DatabaseError::storage)?;
+            rows.collect::<Result<Vec<_>, _>>()
+                .map_err(DatabaseError::storage)?
+        };
+
+        let mut entries = Vec::with_capacity(queued_items.len());
+        for (learning_item_id, title, folder_id, folder_name) in queued_items {
+            let mut statement = transaction
+                .prepare(
+                    "WITH RECURSIVE ancestors(id, name, parent_id, depth) AS (
+                       SELECT id, name, parent_id, 0 FROM folders WHERE id = ?1
+                       UNION ALL
+                       SELECT folders.id, folders.name, folders.parent_id, ancestors.depth + 1
+                       FROM folders JOIN ancestors ON folders.id = ancestors.parent_id
+                     )
+                     SELECT id, name FROM ancestors WHERE depth > 0 ORDER BY depth DESC",
+                )
+                .map_err(DatabaseError::storage)?;
+            let ancestors = statement
+                .query_map([folder_id], |row| {
+                    Ok(ReviewQueueFolderAncestor {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                    })
+                })
+                .map_err(DatabaseError::storage)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(DatabaseError::storage)?;
+            entries.push(HomeReviewQueueEntry {
+                learning_item_id,
+                title,
+                folder: ReviewQueueFolder {
+                    id: folder_id,
+                    name: folder_name,
+                    ancestors,
+                },
+                kind: HomeReviewQueueEntry::DUE_REVIEW,
+            });
+        }
+
+        transaction.commit().map_err(DatabaseError::storage)?;
+        Ok(entries)
     }
 
     pub fn learning_item_detail(
@@ -580,6 +684,266 @@ mod tests {
                 .unwrap(),
             1
         );
+    }
+
+    #[test]
+    fn migration_upgrades_v3_without_losing_learning_items_or_schedules() {
+        let connection = rusqlite::Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY);
+                 CREATE TABLE learner_identity (
+                   singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+                   display_name TEXT NOT NULL CHECK (length(trim(display_name)) > 0)
+                 );
+                 CREATE TABLE folders (
+                   id INTEGER PRIMARY KEY,
+                   parent_id INTEGER REFERENCES folders(id),
+                   name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+                   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                 );
+                 CREATE TABLE learning_items (
+                   id INTEGER PRIMARY KEY,
+                   folder_id INTEGER NOT NULL REFERENCES folders(id),
+                   title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+                   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                 );
+                 CREATE TABLE pending_schedules (
+                   learning_item_id INTEGER PRIMARY KEY REFERENCES learning_items(id),
+                   review_date TEXT NOT NULL
+                 );
+                 INSERT INTO folders (id, name) VALUES (1, 'Algorithms');
+                 INSERT INTO learning_items (id, folder_id, title) VALUES (2, 1, 'Binary Search');
+                 INSERT INTO pending_schedules (learning_item_id, review_date) VALUES (2, '2026-09-09');
+                 INSERT INTO schema_migrations (version) VALUES (1), (2), (3);",
+            )
+            .unwrap();
+        let mut database = super::Database { connection };
+
+        database.migrate().unwrap();
+        assert_eq!(
+            database
+                .connection
+                .query_row(
+                    "SELECT review_date FROM pending_schedules WHERE learning_item_id = 2",
+                    [],
+                    |row| row.get::<_, String>(0),
+                )
+                .unwrap(),
+            "2026-09-09"
+        );
+        assert_eq!(
+            database
+                .connection
+                .query_row(
+                    "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1",
+                    [],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            4
+        );
+        assert!(database
+            .connection
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'review_queue_entries'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .is_ok());
+    }
+
+    #[test]
+    fn observes_today_inclusive_and_excludes_future_items() {
+        let database = Database::open_in_memory().unwrap();
+        let folder = database.create_folder("Algorithms", None).unwrap();
+        let today = NaiveDate::from_ymd_opt(2026, 9, 9).unwrap();
+        let due = database
+            .create_learning_item_with_clock("Due", folder.id, &FixedClock(today))
+            .unwrap();
+        let future = database
+            .create_learning_item_with_clock("Future", folder.id, &FixedClock(today))
+            .unwrap();
+        database
+            .connection
+            .execute(
+                "UPDATE pending_schedules SET review_date = ?1 WHERE learning_item_id = ?2",
+                rusqlite::params![today.to_string(), due.id],
+            )
+            .unwrap();
+
+        let entries = database
+            .get_home_review_queue_with_clock(&FixedClock(today))
+            .unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].learning_item_id, due.id);
+        assert_eq!(entries[0].kind, "dueReview");
+        assert_eq!(entries[0].folder.name, "Algorithms");
+        assert_eq!(
+            database
+                .connection
+                .query_row(
+                    "SELECT COUNT(*) FROM review_queue_entries WHERE learning_item_id = ?1",
+                    [future.id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn appends_fifo_membership_once_and_returns_coherent_rows() {
+        let database = Database::open_in_memory().unwrap();
+        let folder = database.create_folder("Algorithms", None).unwrap();
+        let today = NaiveDate::from_ymd_opt(2026, 9, 9).unwrap();
+        let first = database
+            .create_learning_item_with_clock("First", folder.id, &FixedClock(today))
+            .unwrap();
+        let second = database
+            .create_learning_item_with_clock("Second", folder.id, &FixedClock(today))
+            .unwrap();
+        database
+            .connection
+            .execute(
+                "UPDATE pending_schedules SET review_date = ?1 WHERE learning_item_id IN (?2, ?3)",
+                rusqlite::params![today.to_string(), first.id, second.id],
+            )
+            .unwrap();
+
+        let first_read = database
+            .get_home_review_queue_with_clock(&FixedClock(today))
+            .unwrap();
+        let second_read = database
+            .get_home_review_queue_with_clock(&FixedClock(today))
+            .unwrap();
+        assert_eq!(
+            first_read
+                .iter()
+                .map(|entry| entry.learning_item_id)
+                .collect::<Vec<_>>(),
+            vec![first.id, second.id]
+        );
+        assert_eq!(second_read, first_read);
+        assert_eq!(
+            database
+                .connection
+                .query_row("SELECT COUNT(*) FROM review_queue_entries", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .unwrap(),
+            2
+        );
+    }
+
+    #[test]
+    fn preserves_fifo_order_after_database_reopen() {
+        let path = std::env::temp_dir().join(format!(
+            "taffy-review-queue-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let today = NaiveDate::from_ymd_opt(2026, 9, 9).unwrap();
+        let database = Database::open(&path).unwrap();
+        let folder = database.create_folder("Algorithms", None).unwrap();
+        let first = database.create_learning_item("First", folder.id).unwrap();
+        let second = database.create_learning_item("Second", folder.id).unwrap();
+        database
+            .connection
+            .execute(
+                "UPDATE pending_schedules SET review_date = ?1 WHERE learning_item_id IN (?2, ?3)",
+                rusqlite::params![today.to_string(), first.id, second.id],
+            )
+            .unwrap();
+        let before = database
+            .get_home_review_queue_with_clock(&FixedClock(today))
+            .unwrap();
+        drop(database);
+
+        let reopened = Database::open(&path).unwrap();
+        assert_eq!(
+            reopened
+                .get_home_review_queue_with_clock(&FixedClock(today))
+                .unwrap(),
+            before
+        );
+        drop(reopened);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn rolls_back_all_queue_additions_and_retry_is_safe() {
+        let database = Database::open_in_memory().unwrap();
+        let folder = database.create_folder("Algorithms", None).unwrap();
+        let today = NaiveDate::from_ymd_opt(2026, 9, 9).unwrap();
+        let item = database
+            .create_learning_item_with_clock("Due", folder.id, &FixedClock(today))
+            .unwrap();
+        database
+            .connection
+            .execute(
+                "UPDATE pending_schedules SET review_date = ?1 WHERE learning_item_id = ?2",
+                rusqlite::params![today.to_string(), item.id],
+            )
+            .unwrap();
+        database
+            .connection
+            .execute_batch(
+                "CREATE TRIGGER reject_review_queue_insert
+                 BEFORE INSERT ON review_queue_entries
+                 BEGIN SELECT RAISE(ABORT, 'queue insert rejected'); END;",
+            )
+            .unwrap();
+
+        assert!(database
+            .get_home_review_queue_with_clock(&FixedClock(today))
+            .is_err());
+        assert_eq!(
+            database
+                .connection
+                .query_row("SELECT COUNT(*) FROM review_queue_entries", [], |row| {
+                    row.get::<_, i64>(0)
+                })
+                .unwrap(),
+            0
+        );
+        database
+            .connection
+            .execute_batch("DROP TRIGGER reject_review_queue_insert")
+            .unwrap();
+        assert_eq!(
+            database
+                .get_home_review_queue_with_clock(&FixedClock(today))
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    struct CountingClock {
+        date: NaiveDate,
+        reads: std::cell::Cell<u32>,
+    }
+
+    impl LocalDateClock for CountingClock {
+        fn today(&self) -> NaiveDate {
+            self.reads.set(self.reads.get() + 1);
+            self.date
+        }
+    }
+
+    #[test]
+    fn reads_the_local_date_clock_once_per_observation() {
+        let database = Database::open_in_memory().unwrap();
+        let clock = CountingClock {
+            date: NaiveDate::from_ymd_opt(2026, 9, 9).unwrap(),
+            reads: std::cell::Cell::new(0),
+        };
+        database.get_home_review_queue_with_clock(&clock).unwrap();
+        assert_eq!(clock.reads.get(), 1);
     }
 
     #[test]

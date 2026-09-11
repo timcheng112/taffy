@@ -4,6 +4,7 @@ use tauri::State;
 use crate::learning_items::{LearningItem, LearningItemDetail, LearningItemsError};
 use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
+use crate::review_queue::{HomeReviewQueueEntry, ReviewQueueError};
 use crate::AppState;
 
 #[derive(Deserialize)]
@@ -71,6 +72,16 @@ impl From<LearningItemsError> for CommandError {
             LearningItemsError::InvalidFolder => Self { code: "invalid_folder", field: Some("folderId"), message: "That Folder no longer exists. Return to the Library and try again." },
             LearningItemsError::LearningItemNotFound => Self { code: "learning_item_not_found", field: None, message: "That Learning Item no longer exists. Return to the Folder and try again." },
             LearningItemsError::Database(_) => Self { code: "database_unavailable", field: None, message: "Taffy could not access your local library. Check the app-data folder and try again." },
+        }
+    }
+}
+
+impl From<ReviewQueueError> for CommandError {
+    fn from(_: ReviewQueueError) -> Self {
+        Self {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Check the app-data folder and try again.",
         }
     }
 }
@@ -205,11 +216,28 @@ pub fn update_learning_item_title(
         .map_err(Into::into)
 }
 
+#[tauri::command]
+pub fn get_home_review_queue(
+    state: State<'_, AppState>,
+) -> Result<Vec<HomeReviewQueueEntry>, CommandError> {
+    state
+        .0
+        .lock()
+        .map_err(|_| CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Restart taffy and try again.",
+        })?
+        .get_home_review_queue()
+        .map_err(Into::into)
+}
+
 #[cfg(test)]
 mod tests {
     use super::CommandError;
     use crate::database::DatabaseError;
     use crate::learning_items::LearningItemsError;
+    use crate::review_queue::ReviewQueueError;
 
     #[test]
     fn maps_learning_item_detail_errors_to_stable_command_failures() {
@@ -234,5 +262,31 @@ mod tests {
         )));
         assert_eq!(unavailable.code, "database_unavailable");
         assert_eq!(unavailable.field, None);
+    }
+
+    #[test]
+    fn maps_review_queue_failures_to_database_unavailable() {
+        let error = CommandError::from(ReviewQueueError::Database(DatabaseError::Storage(
+            rusqlite::Error::QueryReturnedNoRows,
+        )));
+        assert_eq!(error.code, "database_unavailable");
+        assert_eq!(error.field, None);
+    }
+
+    #[test]
+    fn serializes_database_failure_as_the_stable_wire_envelope() {
+        let error = CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library.",
+        };
+        assert_eq!(
+            serde_json::to_value(error).unwrap(),
+            serde_json::json!({
+                "code": "database_unavailable",
+                "field": null,
+                "message": "Taffy could not access your local library."
+            })
+        );
     }
 }
