@@ -1,11 +1,7 @@
-import type {
-  CompleteDueReviewRequest,
-  CompletedDueReview,
-  ReviewSessionCommandClient,
-} from "./types";
+import type { CompleteDueReviewRequest, ReviewSessionCommandClient } from "./types";
 
 export function fakeReviewSessionCommandClient(
-  complete: (request: CompleteDueReviewRequest) => Promise<CompletedDueReview>,
+  complete: (request: CompleteDueReviewRequest) => Promise<void>,
 ): ReviewSessionCommandClient {
   return { completeDueReview: complete };
 }

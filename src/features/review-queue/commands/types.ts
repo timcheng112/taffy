@@ -27,15 +27,6 @@ export type CompleteDueReviewRequest = {
   rating: RecallRating;
 };
 
-export type CompletedDueReview = {
-  learningItemId: number;
-  reviewEventId: number;
-  rating: RecallRating;
-  eventKind: "scheduled";
-  completedOn: string;
-  nextReviewDate: string;
-};
-
 export type CompleteDueReviewError = {
   code: "invalid_recall_rating" | "review_not_eligible" | "database_unavailable";
   field: "rating" | null;
@@ -43,7 +34,7 @@ export type CompleteDueReviewError = {
 };
 
 export type ReviewSessionCommandClient = {
-  completeDueReview(request: CompleteDueReviewRequest): Promise<CompletedDueReview>;
+  completeDueReview(request: CompleteDueReviewRequest): Promise<void>;
 };
 
 export function completeDueReviewCommandError(error: unknown): CompleteDueReviewError | null {

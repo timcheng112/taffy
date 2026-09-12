@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ReviewQueueCommandClientProvider } from "../commands/ReviewQueueCommandClientProvider";
 import { ReviewSessionCommandClientProvider } from "../commands/ReviewSessionCommandClientProvider";
 import type { HomeReviewQueueEntry, ReviewSessionCommandClient } from "../commands/types";
-import { ReviewSession } from "./ReviewSession";
+import { ReviewSessionPage } from "./ReviewSessionPage";
 
 const entry: HomeReviewQueueEntry = {
   learningItemId: 4,
@@ -23,7 +23,7 @@ function renderSession(
     <QueryClientProvider client={queryClient}>
       <ReviewQueueCommandClientProvider client={{ getHomeReviewQueue: async () => [entry] }}>
         <ReviewSessionCommandClientProvider client={client}>
-          <ReviewSession learningItemId={4} onAbandon={onAbandon} onCompleted={onCompleted} />
+          <ReviewSessionPage learningItemId={4} onAbandon={onAbandon} onCompleted={onCompleted} />
         </ReviewSessionCommandClientProvider>
       </ReviewQueueCommandClientProvider>
     </QueryClientProvider>,
@@ -32,14 +32,7 @@ function renderSession(
 
 it("activates a title-only session with four accessible star radios and disabled submit", () => {
   renderSession({
-    completeDueReview: async () => ({
-      learningItemId: 4,
-      reviewEventId: 1,
-      rating: "good",
-      eventKind: "scheduled",
-      completedOn: "2026-09-11",
-      nextReviewDate: "2026-09-12",
-    }),
+    completeDueReview: async () => {},
   });
   expect(screen.getByRole("heading", { name: "TypeScript generics" })).toBeVisible();
   expect(screen.getAllByRole("radio", { name: /^Rate recall:/ })).toHaveLength(4);
@@ -49,14 +42,7 @@ it("activates a title-only session with four accessible star radios and disabled
 
 it("moves focus to the session title on entry", async () => {
   renderSession({
-    completeDueReview: async () => ({
-      learningItemId: 4,
-      reviewEventId: 1,
-      rating: "good",
-      eventKind: "scheduled",
-      completedOn: "2026-09-11",
-      nextReviewDate: "2026-09-12",
-    }),
+    completeDueReview: async () => {},
   });
 
   await waitFor(() =>
@@ -119,17 +105,10 @@ it("returns after success and refreshes the Home query", async () => {
       >
         <ReviewSessionCommandClientProvider
           client={{
-            completeDueReview: async () => ({
-              learningItemId: 4,
-              reviewEventId: 1,
-              rating: "good",
-              eventKind: "scheduled",
-              completedOn: "2026-09-11",
-              nextReviewDate: "2026-09-12",
-            }),
+            completeDueReview: async () => {},
           }}
         >
-          <ReviewSession
+          <ReviewSessionPage
             learningItemId={4}
             onAbandon={() => {}}
             onCompleted={() => {
@@ -164,17 +143,10 @@ it("retains a truthful recovery state when success refresh fails, then returns a
       <ReviewQueueCommandClientProvider client={queueClient}>
         <ReviewSessionCommandClientProvider
           client={{
-            completeDueReview: async () => ({
-              learningItemId: 4,
-              reviewEventId: 1,
-              rating: "good",
-              eventKind: "scheduled",
-              completedOn: "2026-09-11",
-              nextReviewDate: "2026-09-12",
-            }),
+            completeDueReview: async () => {},
           }}
         >
-          <ReviewSession
+          <ReviewSessionPage
             learningItemId={4}
             onAbandon={() => {}}
             onCompleted={() => {
@@ -220,7 +192,7 @@ it("keeps stale recovery refresh failures explicit and recoverable", async () =>
             },
           }}
         >
-          <ReviewSession learningItemId={4} onAbandon={() => {}} onCompleted={() => {}} />
+          <ReviewSessionPage learningItemId={4} onAbandon={() => {}} onCompleted={() => {}} />
         </ReviewSessionCommandClientProvider>
       </ReviewQueueCommandClientProvider>
     </QueryClientProvider>,
@@ -244,14 +216,6 @@ it("selects a star without saving, and supports roving Arrow-key selection", asy
   renderSession({
     completeDueReview: async () => {
       calls += 1;
-      return {
-        learningItemId: 4,
-        reviewEventId: 1,
-        rating: "good",
-        eventKind: "scheduled",
-        completedOn: "2026-09-11",
-        nextReviewDate: "2026-09-12",
-      };
     },
   });
   const again = screen.getByRole("radio", { name: "Rate recall: Again, 1 of 4" });
@@ -269,14 +233,6 @@ it("previews candidate rating labels without saving and restores the committed l
   renderSession({
     completeDueReview: async () => {
       calls += 1;
-      return {
-        learningItemId: 4,
-        reviewEventId: 1,
-        rating: "good",
-        eventKind: "scheduled",
-        completedOn: "2026-09-11",
-        nextReviewDate: "2026-09-12",
-      };
     },
   });
 
@@ -317,14 +273,6 @@ it("keeps preview through internal focus moves and restores the unselected promp
   renderSession({
     completeDueReview: async () => {
       calls += 1;
-      return {
-        learningItemId: 4,
-        reviewEventId: 1,
-        rating: "good",
-        eventKind: "scheduled",
-        completedOn: "2026-09-11",
-        nextReviewDate: "2026-09-12",
-      };
     },
   });
 
@@ -346,14 +294,7 @@ it("keeps preview through internal focus moves and restores the unselected promp
 it("uses one keyboard entry point for an unselected radio group", async () => {
   const user = userEvent.setup();
   renderSession({
-    completeDueReview: async () => ({
-      learningItemId: 4,
-      reviewEventId: 1,
-      rating: "good",
-      eventKind: "scheduled",
-      completedOn: "2026-09-11",
-      nextReviewDate: "2026-09-12",
-    }),
+    completeDueReview: async () => {},
   });
 
   await user.tab();

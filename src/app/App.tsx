@@ -5,7 +5,7 @@ import { useLearnerQuery } from "../features/onboarding/queries/useLearnerQuery"
 import { LibraryComposer } from "../features/library/components/LibraryComposer";
 import { AppShell } from "./AppShell";
 import type { AppDestination } from "./AppShell";
-import { ReviewSession } from "../features/review-queue/components/ReviewSession";
+import { ReviewSessionPage } from "../features/review-queue/components/ReviewSessionPage";
 
 export function App() {
   const learnerQuery = useLearnerQuery();
@@ -26,7 +26,7 @@ function AuthenticatedApp({ displayName }: { displayName: string }) {
   const [focusHomeQueue, setFocusHomeQueue] = useState(false);
   if (sessionLearningItemId !== null) {
     return (
-      <ReviewSession
+      <ReviewSessionPage
         learningItemId={sessionLearningItemId}
         onAbandon={() => setSessionLearningItemId(null)}
         onCompleted={() => {
