@@ -4,7 +4,8 @@ use tauri::State;
 use crate::learning_items::{LearningItem, LearningItemDetail, LearningItemsError};
 use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
-use crate::review_queue::{HomeReviewQueueEntry, ReviewQueueError};
+use crate::review_queue::{CompleteDueReviewError, HomeReviewQueueEntry, ReviewQueueError};
+use crate::scheduling::RecallRating;
 use crate::AppState;
 
 #[derive(Deserialize)]
@@ -32,6 +33,14 @@ pub struct CreateLearningItemRequest {
 pub struct UpdateLearningItemTitleRequest {
     learning_item_id: i64,
     title: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompleteDueReviewRequest {
+    learning_item_id: i64,
+    #[serde(default)]
+    rating: Option<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -82,6 +91,16 @@ impl From<ReviewQueueError> for CommandError {
             code: "database_unavailable",
             field: None,
             message: "Taffy could not access your local library. Check the app-data folder and try again.",
+        }
+    }
+}
+
+impl From<CompleteDueReviewError> for CommandError {
+    fn from(error: CompleteDueReviewError) -> Self {
+        match error {
+            CompleteDueReviewError::NotEligible => Self { code: "review_not_eligible", field: None, message: "That review is no longer available. Return to Home and try again." },
+            CompleteDueReviewError::Scheduler(crate::scheduling::SchedulerError::InvalidRating) => Self { code: "invalid_recall_rating", field: Some("rating"), message: "Choose one of the available Recall Ratings." },
+            CompleteDueReviewError::Scheduler(_) | CompleteDueReviewError::Database(_) => Self { code: "database_unavailable", field: None, message: "Taffy could not access your local library. Check the app-data folder and try again." },
         }
     }
 }
@@ -232,12 +251,47 @@ pub fn get_home_review_queue(
         .map_err(Into::into)
 }
 
+#[tauri::command]
+pub fn complete_due_review(
+    request: CompleteDueReviewRequest,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let rating = request
+        .rating
+        .as_ref()
+        .and_then(serde_json::Value::as_str)
+        .ok_or(CommandError {
+            code: "invalid_recall_rating",
+            field: Some("rating"),
+            message: "Choose one of the available Recall Ratings.",
+        })
+        .and_then(|value| {
+            RecallRating::parse(value).map_err(|_| CommandError {
+                code: "invalid_recall_rating",
+                field: Some("rating"),
+                message: "Choose one of the available Recall Ratings.",
+            })
+        })?;
+    state
+        .0
+        .lock()
+        .map_err(|_| CommandError {
+            code: "database_unavailable",
+            field: None,
+            message: "Taffy could not access your local library. Restart taffy and try again.",
+        })?
+        .complete_due_review(request.learning_item_id, rating)
+        .map(|_| ())
+        .map_err(Into::into)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::CommandError;
+    use super::{CommandError, CompleteDueReviewRequest};
     use crate::database::DatabaseError;
     use crate::learning_items::LearningItemsError;
     use crate::review_queue::ReviewQueueError;
+    use crate::scheduling::RecallRating;
 
     #[test]
     fn maps_learning_item_detail_errors_to_stable_command_failures() {
@@ -288,5 +342,42 @@ mod tests {
                 "message": "Taffy could not access your local library."
             })
         );
+    }
+
+    #[test]
+    fn deserializes_the_exact_completion_request_and_serializes_an_acknowledgement() {
+        let request: CompleteDueReviewRequest = serde_json::from_value(serde_json::json!({
+            "learningItemId": 42,
+            "rating": "good"
+        }))
+        .unwrap();
+        assert_eq!(request.learning_item_id, 42);
+        assert_eq!(
+            request.rating.as_ref().and_then(serde_json::Value::as_str),
+            Some("good")
+        );
+
+        for malformed in [
+            serde_json::json!({"learningItemId": 42, "rating": 3}),
+            serde_json::json!({"learningItemId": 42, "rating": null}),
+            serde_json::json!({"learningItemId": 42}),
+        ] {
+            let request: CompleteDueReviewRequest = serde_json::from_value(malformed).unwrap();
+            let error = request
+                .rating
+                .as_ref()
+                .and_then(serde_json::Value::as_str)
+                .and_then(|value| RecallRating::parse(value).ok())
+                .ok_or(CommandError {
+                    code: "invalid_recall_rating",
+                    field: Some("rating"),
+                    message: "Choose one of the available Recall Ratings.",
+                })
+                .unwrap_err();
+            assert_eq!(error.code, "invalid_recall_rating");
+            assert_eq!(error.field, Some("rating"));
+        }
+
+        assert_eq!(serde_json::to_value(()).unwrap(), serde_json::Value::Null);
     }
 }

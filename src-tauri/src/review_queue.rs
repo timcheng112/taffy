@@ -2,6 +2,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::database::DatabaseError;
+use crate::scheduling::SchedulerError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,6 +37,16 @@ impl HomeReviewQueueEntry {
 pub enum ReviewQueueError {
     #[error(transparent)]
     Database(#[from] DatabaseError),
+}
+
+#[derive(Debug, Error)]
+pub enum CompleteDueReviewError {
+    #[error("the review is no longer eligible")]
+    NotEligible,
+    #[error(transparent)]
+    Database(#[from] DatabaseError),
+    #[error(transparent)]
+    Scheduler(#[from] SchedulerError),
 }
 
 #[cfg(test)]

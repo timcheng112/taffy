@@ -9,12 +9,12 @@ import type {
 } from "../../review-queue/commands/types";
 import { HomePage } from "./HomePage";
 
-function renderHome(client: ReviewQueueCommandClient) {
+function renderHome(client: ReviewQueueCommandClient, focusQueueOnMount = false) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ReviewQueueCommandClientProvider client={client}>
-        <HomePage displayName="Alex" />
+        <HomePage displayName="Alex" focusQueueOnMount={focusQueueOnMount} />
       </ReviewQueueCommandClientProvider>
     </QueryClientProvider>,
   );
@@ -46,7 +46,11 @@ it("renders the approved populated Home and preserves returned FIFO order", asyn
     expect.stringContaining("TypeScript generics"),
     expect.stringContaining("Caching strategies"),
   ]);
-  expect(screen.queryByRole("button", { name: /review/i })).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", {
+      name: "Review TypeScript generics, Web Foundations / TypeScript, Due Review",
+    }),
+  ).toBeVisible();
   expect(screen.queryByRole("link", { name: /TypeScript generics/i })).not.toBeInTheDocument();
   expect(screen.queryByText(/FIFO Queue|Display only|ordered by when/i)).not.toBeInTheDocument();
 });
@@ -102,4 +106,10 @@ it("does not render stale rows while the query is in an error state", async () =
   );
   expect(await screen.findByText("Review Queue couldn't load.")).toBeVisible();
   expect(screen.queryByText("TypeScript generics")).not.toBeInTheDocument();
+});
+
+it("focuses the queue heading when returning from a completed review", async () => {
+  renderHome(fakeReviewQueueCommandClient(entries), true);
+
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Review Queue" })).toHaveFocus());
 });
