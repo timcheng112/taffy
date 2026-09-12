@@ -2,7 +2,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::database::DatabaseError;
-use crate::scheduling::{RecallRating, SchedulerError};
+use crate::scheduling::SchedulerError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,17 +37,6 @@ impl HomeReviewQueueEntry {
 pub enum ReviewQueueError {
     #[error(transparent)]
     Database(#[from] DatabaseError),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompletedDueReview {
-    pub learning_item_id: i64,
-    pub review_event_id: i64,
-    pub rating: RecallRating,
-    pub event_kind: &'static str,
-    pub completed_on: String,
-    pub next_review_date: String,
 }
 
 #[derive(Debug, Error)]

@@ -13,8 +13,8 @@ use crate::learning_items::{
 use crate::library::{Folder, FolderContent, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
 use crate::review_queue::{
-    CompleteDueReviewError, CompletedDueReview, HomeReviewQueueEntry, ReviewQueueError,
-    ReviewQueueFolder, ReviewQueueFolderAncestor,
+    CompleteDueReviewError, HomeReviewQueueEntry, ReviewQueueError, ReviewQueueFolder,
+    ReviewQueueFolderAncestor,
 };
 use crate::scheduling::{
     first_review_date, schedule, timestamp_millis, utc_from_timestamp_millis, LocalDateClock,
@@ -520,7 +520,7 @@ impl Database {
         &self,
         learning_item_id: i64,
         rating: RecallRating,
-    ) -> Result<CompletedDueReview, CompleteDueReviewError> {
+    ) -> Result<(), CompleteDueReviewError> {
         self.complete_due_review_with_clock(learning_item_id, rating, &SystemLocalDateClock)
     }
 
@@ -529,7 +529,7 @@ impl Database {
         learning_item_id: i64,
         rating: RecallRating,
         clock: &impl LocalDateClock,
-    ) -> Result<CompletedDueReview, CompleteDueReviewError> {
+    ) -> Result<(), CompleteDueReviewError> {
         let completed_at_utc = clock.now_utc();
         let completed_on = clock.local_date_at(completed_at_utc);
         let transaction = self
@@ -612,7 +612,6 @@ impl Database {
                 ],
             )
             .map_err(DatabaseError::storage)?;
-        let event_id = transaction.last_insert_rowid();
         let changed = transaction
             .execute(
                 "UPDATE pending_schedules
@@ -653,14 +652,7 @@ impl Database {
             return Err(CompleteDueReviewError::NotEligible);
         }
         commit_completion(transaction)?;
-        Ok(CompletedDueReview {
-            learning_item_id,
-            review_event_id: event_id,
-            rating,
-            event_kind: "scheduled",
-            completed_on: completed_on.to_string(),
-            next_review_date: next_review_date.to_string(),
-        })
+        Ok(())
     }
 
     pub fn learning_item_detail(
@@ -1922,7 +1914,7 @@ mod tests {
     }
 
     #[test]
-    fn completes_each_rating_atomically_and_returns_canonical_result() {
+    fn completes_each_rating_atomically_and_persists_canonical_state() {
         for (rating, expected_state) in [
             (crate::scheduling::RecallRating::Again, "learning"),
             (crate::scheduling::RecallRating::Hard, "learning"),
@@ -1946,14 +1938,38 @@ mod tests {
                 .get_home_review_queue_with_clock(&FixedClock(today))
                 .unwrap();
 
-            let result = database
+            database
                 .complete_due_review_with_clock(item.id, rating, &FixedClock(today))
                 .unwrap();
-            assert_eq!(result.learning_item_id, item.id);
-            assert_eq!(result.rating, rating);
-            assert_eq!(result.event_kind, "scheduled");
-            assert_eq!(result.completed_on, today.to_string());
-            assert_eq!(result.next_review_date >= result.completed_on, true);
+            assert_eq!(
+                database
+                    .connection
+                    .query_row(
+                        "SELECT learning_item_id, event_kind, rating, completed_on FROM review_events",
+                        [],
+                        |row| {
+                            Ok((
+                                row.get::<_, i64>(0)?,
+                                row.get::<_, String>(1)?,
+                                row.get::<_, String>(2)?,
+                                row.get::<_, String>(3)?,
+                            ))
+                        },
+                    )
+                    .unwrap(),
+                (item.id, "scheduled".to_owned(), rating.to_string(), today.to_string())
+            );
+            assert!(
+                database
+                    .connection
+                    .query_row(
+                        "SELECT review_date FROM pending_schedules WHERE learning_item_id = ?1",
+                        [item.id],
+                        |row| row.get::<_, String>(0),
+                    )
+                    .unwrap()
+                    >= today.to_string()
+            );
             assert_eq!(
                 database
                     .connection
