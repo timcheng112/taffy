@@ -4,9 +4,7 @@ use tauri::State;
 use crate::learning_items::{LearningItem, LearningItemDetail, LearningItemsError};
 use crate::library::{Folder, FolderView, LibraryError};
 use crate::onboarding::{Learner, OnboardingError};
-use crate::review_queue::{
-    CompleteDueReviewError, CompletedDueReview, HomeReviewQueueEntry, ReviewQueueError,
-};
+use crate::review_queue::{CompleteDueReviewError, HomeReviewQueueEntry, ReviewQueueError};
 use crate::scheduling::RecallRating;
 use crate::AppState;
 
@@ -257,7 +255,7 @@ pub fn get_home_review_queue(
 pub fn complete_due_review(
     request: CompleteDueReviewRequest,
     state: State<'_, AppState>,
-) -> Result<CompletedDueReview, CommandError> {
+) -> Result<(), CommandError> {
     let rating = request
         .rating
         .as_ref()
@@ -283,6 +281,7 @@ pub fn complete_due_review(
             message: "Taffy could not access your local library. Restart taffy and try again.",
         })?
         .complete_due_review(request.learning_item_id, rating)
+        .map(|_| ())
         .map_err(Into::into)
 }
 
@@ -346,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn deserializes_the_exact_completion_request_and_serializes_success() {
+    fn deserializes_the_exact_completion_request_and_serializes_an_acknowledgement() {
         let request: CompleteDueReviewRequest = serde_json::from_value(serde_json::json!({
             "learningItemId": 42,
             "rating": "good"
@@ -379,24 +378,6 @@ mod tests {
             assert_eq!(error.field, Some("rating"));
         }
 
-        let result = crate::review_queue::CompletedDueReview {
-            learning_item_id: 42,
-            review_event_id: 9,
-            rating: crate::scheduling::RecallRating::Good,
-            event_kind: "scheduled",
-            completed_on: "2026-09-09".to_owned(),
-            next_review_date: "2026-09-12".to_owned(),
-        };
-        assert_eq!(
-            serde_json::to_value(result).unwrap(),
-            serde_json::json!({
-                "learningItemId": 42,
-                "reviewEventId": 9,
-                "rating": "good",
-                "eventKind": "scheduled",
-                "completedOn": "2026-09-09",
-                "nextReviewDate": "2026-09-12"
-            })
-        );
+        assert_eq!(serde_json::to_value(()).unwrap(), serde_json::Value::Null);
     }
 }

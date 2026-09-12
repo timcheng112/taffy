@@ -5,7 +5,7 @@ const invoke = vi.hoisted(() => vi.fn<(command: string, args?: unknown) => Promi
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
 it("wraps the completion request for Tauri without exposing completion internals", async () => {
-  invoke.mockResolvedValueOnce({ reviewEventId: 8 });
+  invoke.mockResolvedValueOnce(null);
   await expect(
     tauriReviewSessionCommandClient.completeDueReview({ learningItemId: 4, rating: "good" }),
   ).resolves.toBeUndefined();
