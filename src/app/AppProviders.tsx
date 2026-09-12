@@ -7,6 +7,8 @@ import { OnboardingCommandClientProvider } from "../features/onboarding/commands
 import { tauriOnboardingCommandClient } from "../features/onboarding/commands/tauriOnboardingCommandClient";
 import { ReviewQueueCommandClientProvider } from "../features/review-queue/commands/ReviewQueueCommandClientProvider";
 import { tauriReviewQueueCommandClient } from "../features/review-queue/commands/tauriReviewQueueCommandClient";
+import { ReviewSessionCommandClientProvider } from "../features/review-queue/commands/ReviewSessionCommandClientProvider";
+import { tauriReviewSessionCommandClient } from "../features/review-queue/commands/tauriReviewSessionCommandClient";
 import { queryClient } from "./queryClient";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -16,7 +18,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <LibraryCommandClientProvider client={tauriLibraryCommandClient}>
           <LearningItemsCommandClientProvider client={tauriLearningItemsCommandClient}>
             <ReviewQueueCommandClientProvider client={tauriReviewQueueCommandClient}>
-              {children}
+              <ReviewSessionCommandClientProvider client={tauriReviewSessionCommandClient}>
+                {children}
+              </ReviewSessionCommandClientProvider>
             </ReviewQueueCommandClientProvider>
           </LearningItemsCommandClientProvider>
         </LibraryCommandClientProvider>

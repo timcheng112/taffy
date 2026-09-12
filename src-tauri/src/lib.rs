@@ -32,7 +32,8 @@ pub fn run() {
             commands::create_learning_item,
             commands::get_learning_item_detail,
             commands::update_learning_item_title,
-            commands::get_home_review_queue
+            commands::get_home_review_queue,
+            commands::complete_due_review
         ])
         .run(tauri::generate_context!())
         .expect("error while running taffy");

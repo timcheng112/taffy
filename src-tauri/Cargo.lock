@@ -2552,6 +2552,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rs-fsrs"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65a7e7d53c16e720833aa109509f46d4d6cc0c4c820f95b865df72c6118e9124"
+dependencies = [
+ "chrono",
+]
+
+[[package]]
 name = "rusqlite"
 version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3056,6 +3065,7 @@ name = "taffy"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "rs-fsrs",
  "rusqlite",
  "serde",
  "serde_json",

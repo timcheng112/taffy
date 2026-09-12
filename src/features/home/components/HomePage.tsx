@@ -8,19 +8,35 @@ function folderPath(entry: HomeReviewQueueEntry) {
   return [...entry.folder.ancestors, entry.folder].map((folder) => folder.name).join(" / ");
 }
 
-function ReviewQueueRow({ entry }: { entry: HomeReviewQueueEntry }) {
+function ReviewQueueRow({
+  entry,
+  onStartReview,
+}: {
+  entry: HomeReviewQueueEntry;
+  onStartReview: (id: number) => void;
+}) {
   const path = folderPath(entry);
   return (
-    <li className="review-queue-row" aria-label={`${entry.title}, ${path}, Due Review`}>
-      <FileText className="review-queue-row-icon" size={18} aria-hidden="true" />
-      <div className="review-queue-row-content">
-        <span className="review-queue-row-title">{entry.title}</span>
-        <span className="review-queue-row-folder">
-          <Folder size={14} aria-hidden="true" />
-          {path}
+    <li className="review-queue-row">
+      <button
+        className="review-queue-row-action"
+        type="button"
+        onClick={() => onStartReview(entry.learningItemId)}
+        aria-label={`Review ${entry.title}, ${path}, Due Review`}
+      >
+        <FileText className="review-queue-row-icon" size={18} aria-hidden="true" />
+        <span className="review-queue-row-content">
+          <span className="review-queue-row-title">{entry.title}</span>
+          <span className="review-queue-row-folder">
+            <Folder size={14} aria-hidden="true" />
+            {path}
+          </span>
         </span>
-      </div>
-      <span className="review-queue-row-status">Due Review</span>
+        <span className="review-queue-row-status">
+          <i aria-hidden="true" />
+          Due Review
+        </span>
+      </button>
     </li>
   );
 }
@@ -39,10 +55,19 @@ function LoadingQueue() {
   );
 }
 
-export function HomePage({ displayName }: { displayName: string }) {
+export function HomePage({
+  displayName,
+  onStartReview,
+  focusQueueOnMount = false,
+}: {
+  displayName: string;
+  onStartReview?: (id: number) => void;
+  focusQueueOnMount?: boolean;
+}) {
   const queueQuery = useHomeReviewQueueQuery();
   const [isRetrying, setIsRetrying] = useState(false);
   const errorRegionRef = useRef<HTMLDivElement>(null);
+  const queueHeadingRef = useRef<HTMLHeadingElement>(null);
   const hasFocusedInitialError = useRef(false);
 
   useEffect(() => {
@@ -51,6 +76,10 @@ export function HomePage({ displayName }: { displayName: string }) {
       hasFocusedInitialError.current = true;
     }
   }, [queueQuery.isError, queueQuery.isFetching]);
+
+  useEffect(() => {
+    if (focusQueueOnMount) queueHeadingRef.current?.focus();
+  }, [focusQueueOnMount]);
 
   const entries = queueQuery.data;
   const showError = queueQuery.isError || isRetrying;
@@ -67,10 +96,13 @@ export function HomePage({ displayName }: { displayName: string }) {
       <header className="home-header">
         <p className="eyebrow">HOME</p>
         <h1>Welcome back, {displayName}.</h1>
+        <p className="home-completed-today">Completed Today 0</p>
       </header>
       <section className="review-queue-section" aria-labelledby="review-queue-title">
         <div className="review-queue-heading">
-          <h2 id="review-queue-title">Review Queue</h2>
+          <h2 id="review-queue-title" ref={queueHeadingRef} tabIndex={-1}>
+            Review Queue
+          </h2>
           {entries && !showError && (
             <span className="review-queue-count">
               {entries.length} Due Review{entries.length === 1 ? "" : "s"}
@@ -101,7 +133,11 @@ export function HomePage({ displayName }: { displayName: string }) {
         {!showLoading && !showError && entries && entries.length > 0 && (
           <ul className="review-queue-list" aria-label="Due Reviews">
             {entries.map((entry) => (
-              <ReviewQueueRow key={entry.learningItemId} entry={entry} />
+              <ReviewQueueRow
+                key={entry.learningItemId}
+                entry={entry}
+                onStartReview={onStartReview ?? (() => undefined)}
+              />
             ))}
           </ul>
         )}
